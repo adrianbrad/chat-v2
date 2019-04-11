@@ -15,6 +15,7 @@ type wsConn interface {
 type Client interface {
 	Read(messageQueue chan *ClientMessage)
 	Write()
+	AddToMessageQueue(message *ClientMessage)
 }
 
 type client struct {
@@ -59,4 +60,8 @@ func (client *client) Write() {
 			}
 		}
 	}
+}
+
+func (client *client) AddToMessageQueue(message *ClientMessage) {
+	client.MessageQueue <- message
 }

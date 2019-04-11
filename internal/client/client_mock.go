@@ -19,3 +19,8 @@ func (m *Mock) Read(messageQueue chan *ClientMessage) {}
 
 //Write has to block execution so we have time to assert the clients map length in chatservice_test.go
 func (m *Mock) Write() { time.Sleep(100 * time.Millisecond); return }
+
+func (m *Mock) AddToMessageQueue(message *ClientMessage) {
+	_ = m.Called(message)
+
+}

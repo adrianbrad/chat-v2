@@ -64,19 +64,21 @@ func (c *ChatService) run() {
 		select {
 		case client := <-c.addClient:
 			c.clients[client] = struct{}{}
+
 		case client := <-c.removeClient:
 			delete(c.clients, client)
+
 		}
 	}
 }
 
 func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]interface{}) (err error) {
 	userID, ok := data["userID"].(string)
-
 	if !ok {
 		err = fmt.Errorf("User ID is not present in data or is not string, data: %+v", data)
 		return
 	}
+
 	roomID, ok := data["roomID"].(string)
 	if !ok {
 		err = fmt.Errorf("Room ID is not present in data or is not string, data: %+v", data)
