@@ -1,7 +1,7 @@
 package room
 
 import (
-	"chat-v2/internal/chat/models/client"
+	"chat-v2/internal/client"
 )
 
 type Room struct {

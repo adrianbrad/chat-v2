@@ -1,15 +1,17 @@
 package chatservice
 
 import (
-	"chat-v2/internal/chat/models/client"
-	"chat-v2/internal/chat/models/room"
-	"chat-v2/internal/chat/models/user"
-	"chat-v2/internal/chat/repository/roomrepository"
+	"chat-v2/internal/client"
+	"chat-v2/internal/room"
+	"chat-v2/internal/user"
 	"fmt"
 	"testing"
 	"time"
 
-	"chat-v2/internal/chat/repository/userrepository.go"
+	"chat-v2/internal/repository/roomrepository"
+
+	"chat-v2/internal/repository/userrepository"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

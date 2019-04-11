@@ -1,7 +1,7 @@
 package userrepository
 
 import (
-	"chat-v2/internal/chat/models/user"
+	"chat-v2/internal/user"
 
 	"github.com/stretchr/testify/mock"
 )

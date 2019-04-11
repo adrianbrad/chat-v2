@@ -1,7 +1,7 @@
 package client
 
 import (
-	"chat-v2/internal/chat/models/user"
+	"chat-v2/internal/user"
 	"time"
 
 	"github.com/stretchr/testify/mock"

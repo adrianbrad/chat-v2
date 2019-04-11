@@ -24,7 +24,8 @@ func Run(port string, mux *http.ServeMux) {
 	<-stop
 
 	log.Infof("Server shutting down")
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Errorf("Error while shutting down server: %s", err.Error())
 	}
