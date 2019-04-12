@@ -1,7 +1,7 @@
 package room
 
 import (
-	"chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/client"
 )
 
 type messageProcessor interface {

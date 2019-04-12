@@ -1,8 +1,8 @@
 package room
 
 import (
-	"chat-v2/internal/client"
-	"chat-v2/internal/messageprocessor"
+	"github.com/adrianbrad/chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/messageprocessor"
 	"testing"
 	"time"
 

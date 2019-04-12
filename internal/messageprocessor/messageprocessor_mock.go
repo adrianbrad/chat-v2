@@ -1,7 +1,7 @@
 package messageprocessor
 
 import (
-	"chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/client"
 
 	"github.com/stretchr/testify/mock"
 )

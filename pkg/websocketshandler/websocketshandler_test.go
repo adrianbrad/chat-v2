@@ -1,7 +1,7 @@
 package websocketshandler
 
 import (
-	testutils "chat-v2/test/utils"
+	testutils "github.com/adrianbrad/chat-v2/test/utils"
 	"fmt"
 	"net/http"
 	"net/http/httptest"

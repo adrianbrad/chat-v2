@@ -1,7 +1,7 @@
 package httpotpauth
 
 import (
-	"chat-v2/pkg/otpauth/auth"
+	"github.com/adrianbrad/chat-v2/pkg/otpauth/auth"
 	"io/ioutil"
 	"net/http"
 	"time"

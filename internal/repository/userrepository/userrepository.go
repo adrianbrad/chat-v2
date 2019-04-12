@@ -1,8 +1,8 @@
 package userrepository
 
 import (
-	"chat-v2/internal/repository"
-	"chat-v2/internal/user"
+	"github.com/adrianbrad/chat-v2/internal/repository"
+	"github.com/adrianbrad/chat-v2/internal/user"
 )
 
 type UserRepository struct {

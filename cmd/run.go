@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"chat-v2/internal/server"
 	"net/http"
+
+	"github.com/adrianbrad/chat-v2/internal/server"
 )
 
 func Run() {

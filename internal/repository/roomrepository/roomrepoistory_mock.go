@@ -1,7 +1,7 @@
 package roomrepository
 
 import (
-	"chat-v2/internal/room"
+	"github.com/adrianbrad/chat-v2/internal/room"
 
 	"github.com/stretchr/testify/mock"
 )

@@ -1,7 +1,7 @@
 package client
 
 import (
-	"chat-v2/internal/user"
+	"github.com/adrianbrad/chat-v2/internal/user"
 )
 
 type ClientFactoryMethod func(wsConn wsConn, user *user.User) Client

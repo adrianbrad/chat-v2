@@ -1,9 +1,9 @@
 package chatservice
 
 import (
-	"chat-v2/internal/client"
-	"chat-v2/internal/room"
-	"chat-v2/internal/user"
+	"github.com/adrianbrad/chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/room"
+	"github.com/adrianbrad/chat-v2/internal/user"
 	"fmt"
 
 	"github.com/gorilla/websocket"
