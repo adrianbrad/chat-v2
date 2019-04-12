@@ -31,7 +31,7 @@ type ChatService struct {
 
 	createClient client.ClientFactoryMethod
 
-	done chan struct{}
+	stopChan chan struct{}
 }
 
 func NewChatService(
@@ -59,7 +59,7 @@ func NewChatService(
 
 		createClient: createClientFactoryMethod,
 
-		done: make(chan struct{}, 1),
+		stopChan: make(chan struct{}, 1),
 	}
 	go cs.run(nil)
 	return cs
@@ -80,7 +80,7 @@ func (c *ChatService) run(wg *sync.WaitGroup) {
 				wg.Done()
 			}
 
-		case <-c.done:
+		case <-c.stopChan:
 			if wg != nil {
 				wg.Done()
 			}
@@ -90,7 +90,7 @@ func (c *ChatService) run(wg *sync.WaitGroup) {
 }
 
 func (c *ChatService) stop() {
-	c.done <- struct{}{}
+	c.stopChan <- struct{}{}
 }
 
 func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]interface{}) (err error) {
@@ -129,7 +129,9 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 	//we read the messages from the socket and forward them to the room message queue
 	go client.Read(c.rooms[roomID].MessageQueue)
 	//we retrieve the messages sent by the room to the client message queue and send them to the client
-	// ! the for loop in this function blocks as long as the websocket connection is valid, this satisfies the websockethandler.ServeHTTP condition
-	client.Write()
+	go client.Write()
+
+	//We block execution until the websocket connection ended
+	<-client.ConnectionEnded()
 	return
 }

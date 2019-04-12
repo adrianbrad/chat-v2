@@ -20,7 +20,9 @@ import (
 func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *user.User, ur *userrepository.Mock, service *ChatService, teardown func()) {
 	roomsSlice = []*room.Room{
 		&room.Room{
-			ID: "room1",
+			ID:           "room1",
+			AddClient:    make(chan client.Client),
+			RemoveClient: make(chan client.Client),
 		},
 		&room.Room{
 			ID: "room2",
@@ -30,6 +32,14 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 			// AddClient
 		},
 	}
+
+	go func() {
+		<-roomsSlice[0].AddClient
+	}()
+	go func() {
+		<-roomsSlice[0].RemoveClient
+	}()
+
 	rr = &roomrepository.Mock{}
 	rr.On("GetAll").Return(roomsSlice)
 
@@ -57,7 +67,7 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 
 		createClient: client.NewMock,
 
-		done: make(chan struct{}, 1),
+		stopChan: make(chan struct{}, 1),
 	}
 
 	var wg sync.WaitGroup
@@ -70,7 +80,7 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 		wg.Wait()
 		close(service.addClient)
 		close(service.removeClient)
-		close(service.done)
+		close(service.stopChan)
 	}
 
 	return
@@ -106,29 +116,16 @@ func Test_HandleWSConn_ErrorRetrievingUser(t *testing.T) {
 }
 
 func Test_HandleWSConn_Success(t *testing.T) {
-	rooms, _, _, _, service, _ := setUp(1)
+	_, _, _, _, service, teardown := setUp(2)
 
-	handleJoinRoomChan := make(chan client.Client)
-	handleLeaveRoomChan := make(chan client.Client)
-	rooms[0].AddClient = handleJoinRoomChan
-	rooms[0].RemoveClient = handleLeaveRoomChan
-
-	//We have to offload the room channels, otherwise the test will be blocked
-	go func() {
-		//this is done after adding the user to channel
-		<-handleJoinRoomChan
-		// assert.Equal(t, 1, len(service.clients))
-		return
-	}()
-	go func() {
-		//this is done after removing the user from channel
-		<-handleLeaveRoomChan
-		// assert.Equal(t, 0, len(service.clients))
-		return
-	}()
-
+	client.InitClientMock()
+	client.ClientMock.On("Write").Return().Run(func(mock.Arguments) {
+		client.ClientMock.ConnectionEnded() <- struct{}{}
+	})
 	//We have to run this in parallel and make sure that we have something that blocks during execution, in our case the mockClient.Write method
-	go service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
+	service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
 
-	// teardown()
+	teardown()
+
+	assert.Equal(t, 0, len(service.clients))
 }
