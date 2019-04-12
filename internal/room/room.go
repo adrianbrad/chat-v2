@@ -84,7 +84,6 @@ func (r *Room) stop() {
 }
 
 func (r *Room) broadcastMessage(message *client.ClientMessage) {
-
 	for client := range r.Clients {
 		client.AddToMessageQueue(message)
 	}

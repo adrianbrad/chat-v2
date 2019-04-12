@@ -31,7 +31,7 @@ func (m *Mock) Write() {
 }
 
 func (m *Mock) AddToMessageQueue(message *ClientMessage) {
-	// _ = m.Called(message)
+	_ = m.Called(message)
 }
 
 func (m *Mock) ConnectionEnded() chan struct{} {
