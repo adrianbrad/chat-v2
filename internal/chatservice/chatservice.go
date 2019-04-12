@@ -1,10 +1,12 @@
 package chatservice
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/adrianbrad/chat-v2/internal/client"
 	"github.com/adrianbrad/chat-v2/internal/room"
 	"github.com/adrianbrad/chat-v2/internal/user"
-	"fmt"
 
 	"github.com/gorilla/websocket"
 )
@@ -28,6 +30,8 @@ type ChatService struct {
 	removeClient chan client.Client
 
 	createClient client.ClientFactoryMethod
+
+	done chan struct{}
 }
 
 func NewChatService(
@@ -39,7 +43,7 @@ func NewChatService(
 	repoRooms := roomRepository.GetAll()
 	rooms := make(map[string]*room.Room, len(repoRooms))
 	for _, room := range repoRooms {
-		//! remember to init channel
+		//! remember to init room channels
 		rooms[room.ID] = room
 	}
 
@@ -54,22 +58,39 @@ func NewChatService(
 		removeClient: make(chan client.Client),
 
 		createClient: createClientFactoryMethod,
+
+		done: make(chan struct{}, 1),
 	}
-	go cs.run()
+	go cs.run(nil)
 	return cs
 }
 
-func (c *ChatService) run() {
+func (c *ChatService) run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case client := <-c.addClient:
 			c.clients[client] = struct{}{}
+			if wg != nil {
+				wg.Done()
+			}
 
 		case client := <-c.removeClient:
 			delete(c.clients, client)
+			if wg != nil {
+				wg.Done()
+			}
 
+		case <-c.done:
+			if wg != nil {
+				wg.Done()
+			}
+			return
 		}
 	}
+}
+
+func (c *ChatService) stop() {
+	c.done <- struct{}{}
 }
 
 func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]interface{}) (err error) {

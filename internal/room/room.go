@@ -1,6 +1,8 @@
 package room
 
 import (
+	"sync"
+
 	"github.com/adrianbrad/chat-v2/internal/client"
 )
 
@@ -18,6 +20,8 @@ type Room struct {
 	RemoveClient chan client.Client
 
 	MessageQueue chan *client.ClientMessage
+
+	done chan struct{}
 }
 
 func New(
@@ -35,27 +39,48 @@ func New(
 		RemoveClient: make(chan client.Client),
 
 		MessageQueue: make(chan *client.ClientMessage),
+
+		done: make(chan struct{}, 1),
 	}
-	go room.run()
+	go room.run(nil)
 
 	return room
 }
 
-func (r *Room) run() {
+func (r *Room) run(wg *sync.WaitGroup) {
 	for {
 		select {
 		case clientJoins := <-r.AddClient:
 			r.Clients[clientJoins] = struct{}{}
+			if wg != nil {
+				wg.Done()
+			}
 
 		case clientLeaves := <-r.RemoveClient:
 			delete(r.Clients, clientLeaves)
+			if wg != nil {
+				wg.Done()
+			}
 
 		case message := <-r.MessageQueue:
 			processedMessage := r.ProcessMessage(message)
 
 			r.broadcastMessage(processedMessage)
+			if wg != nil {
+				wg.Done()
+			}
+
+		case <-r.done:
+			if wg != nil {
+				wg.Done()
+			}
+			return
 		}
 	}
+}
+
+func (r *Room) stop() {
+	r.done <- struct{}{}
 }
 
 func (r *Room) broadcastMessage(message *client.ClientMessage) {
