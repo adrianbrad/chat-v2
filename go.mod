@@ -1,6 +1,6 @@
 module github.com/adrianbrad/chat-v2
 
-go 1.12
+go 1.10
 
 require (
 	github.com/google/pprof v0.0.0-20190404155422-f8f10df84213 // indirect
