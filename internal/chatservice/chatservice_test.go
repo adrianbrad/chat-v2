@@ -71,13 +71,13 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(delta + 1)
+	wg.Add(delta)
 
 	go service.run(&wg)
 
 	teardown = func() {
-		service.stop()
 		wg.Wait()
+		service.stop()
 		close(service.addClient)
 		close(service.removeClient)
 		close(service.stopChan)
@@ -119,11 +119,9 @@ func Test_HandleWSConn_Success(t *testing.T) {
 	_, _, _, _, service, teardown := setUp(2)
 
 	client.InitClientMock()
-	client.ClientMock.On("Write").Return().Run(func(mock.Arguments) {
-		client.ClientMock.ConnectionEnded() <- struct{}{}
-	})
-	//We have to run this in parallel and make sure that we have something that blocks during execution, in our case the mockClient.Write method
-	service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
+	go service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
+
+	client.ClientMock.ConnectionEnded() <- struct{}{}
 
 	teardown()
 

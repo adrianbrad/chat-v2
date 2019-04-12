@@ -7,7 +7,7 @@ import (
 )
 
 type messageProcessor interface {
-	ProcessMessage(*client.ClientMessage) *client.ClientMessage
+	ProcessMessage(*client.ClientMessage) map[string]interface{}
 }
 
 type Room struct {
@@ -83,7 +83,7 @@ func (r *Room) stop() {
 	r.done <- struct{}{}
 }
 
-func (r *Room) broadcastMessage(message *client.ClientMessage) {
+func (r *Room) broadcastMessage(message map[string]interface{}) {
 	for client := range r.Clients {
 		client.AddToMessageQueue(message)
 	}

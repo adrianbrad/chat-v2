@@ -19,21 +19,25 @@ func InitClientMock() {
 	}
 }
 
-func NewMock(wsConn wsConn, user *user.User) Client {
+func NewMock(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan *ClientMessage) Client {
 	return ClientMock
 }
 
-func (m *Mock) Read(messageQueue chan *ClientMessage) {}
+func (m *Mock) Read() {}
 
 //Write has to block execution so we have time to assert the clients map length in chatservice_test.go
 func (m *Mock) Write() {
 	_ = m.Called()
 }
 
-func (m *Mock) AddToMessageQueue(message *ClientMessage) {
+func (m *Mock) AddToMessageQueue(message map[string]interface{}) {
 	_ = m.Called(message)
 }
 
 func (m *Mock) ConnectionEnded() chan struct{} {
 	return m.connectionEnded
+}
+
+func (m *Mock) GetUser() *user.User {
+	return nil
 }

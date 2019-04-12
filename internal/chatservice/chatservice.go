@@ -29,7 +29,7 @@ type ChatService struct {
 	addClient    chan client.Client
 	removeClient chan client.Client
 
-	createClient client.ClientFactoryMethod
+	createClient client.FactoryMethod
 
 	stopChan chan struct{}
 }
@@ -37,7 +37,7 @@ type ChatService struct {
 func NewChatService(
 	userRepository userRepository,
 	roomRepository roomRepository,
-	createClientFactoryMethod client.ClientFactoryMethod,
+	createClientFactoryMethod client.FactoryMethod,
 ) *ChatService {
 
 	repoRooms := roomRepository.GetAll()
@@ -81,9 +81,9 @@ func (c *ChatService) run(wg *sync.WaitGroup) {
 			}
 
 		case <-c.stopChan:
-			if wg != nil {
-				wg.Done()
-			}
+			// if wg != nil {
+			// 	wg.Done()
+			// }
 			return
 		}
 	}
@@ -111,25 +111,20 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 		return
 	}
 
-	client := c.createClient(wsConn, user)
-
-	c.addClient <- client
 	room, ok := c.rooms[roomID]
 	if !ok {
 		err = fmt.Errorf("Room with id: %s does not exist", roomID)
 		return
 	}
 
+	client := c.createClient(wsConn, user, room.ID, room.MessageQueue)
+
+	c.addClient <- client
 	room.AddClient <- client
 	defer func() {
 		c.removeClient <- client
 		c.rooms[roomID].RemoveClient <- client
 	}()
-
-	//we read the messages from the socket and forward them to the room message queue
-	go client.Read(c.rooms[roomID].MessageQueue)
-	//we retrieve the messages sent by the room to the client message queue and send them to the client
-	go client.Write()
 
 	//We block execution until the websocket connection ended
 	<-client.ConnectionEnded()
