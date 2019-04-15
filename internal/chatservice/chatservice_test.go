@@ -59,13 +59,13 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 	service = &ChatService{
 		userRepository: ur,
 
+		clientFactory: client.NewTestingFactory(),
+
 		clients: make(map[client.Client]struct{}),
 		rooms:   rooms,
 
 		addClient:    make(chan client.Client),
 		removeClient: make(chan client.Client),
-
-		createClient: client.NewMock,
 
 		stopChan: make(chan struct{}, 1),
 	}

@@ -23,13 +23,13 @@ type ChatService struct {
 	userRepository userRepository
 	roomRepository roomRepository
 
+	clientFactory client.Factory
+
 	clients map[client.Client]struct{}
 	rooms   map[string]*room.Room
 
 	addClient    chan client.Client
 	removeClient chan client.Client
-
-	createClient client.FactoryMethod
 
 	stopChan chan struct{}
 }
@@ -37,7 +37,7 @@ type ChatService struct {
 func NewChatService(
 	userRepository userRepository,
 	roomRepository roomRepository,
-	createClientFactoryMethod client.FactoryMethod,
+	clientFactory client.Factory,
 ) *ChatService {
 
 	repoRooms := roomRepository.GetAll()
@@ -51,13 +51,13 @@ func NewChatService(
 		userRepository: userRepository,
 		roomRepository: roomRepository,
 
+		clientFactory: clientFactory,
+
 		clients: make(map[client.Client]struct{}),
 		rooms:   rooms,
 
 		addClient:    make(chan client.Client),
 		removeClient: make(chan client.Client),
-
-		createClient: createClientFactoryMethod,
 
 		stopChan: make(chan struct{}, 1),
 	}
@@ -117,7 +117,7 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 		return
 	}
 
-	client := c.createClient(wsConn, user, room.ID, room.MessageQueue)
+	client := c.clientFactory.Create(wsConn, user, room.ID, room.MessageQueue)
 
 	c.addClient <- client
 	room.AddClient <- client

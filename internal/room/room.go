@@ -6,39 +6,28 @@ import (
 	"github.com/adrianbrad/chat-v2/internal/client"
 )
 
-type messageProcessor interface {
-	ProcessMessage(*client.ClientMessage) map[string]interface{}
-}
-
 type Room struct {
-	messageProcessor
-
 	ID string
 
 	Clients      map[client.Client]struct{}
 	AddClient    chan client.Client
 	RemoveClient chan client.Client
 
-	MessageQueue chan *client.ClientMessage
+	MessageQueue chan map[string]interface{}
 
 	done chan struct{}
 }
 
-func New(
-	messageProcessor messageProcessor,
-	ID string,
-) *Room {
+func New(ID string) *Room {
 
 	room := &Room{
-		messageProcessor: messageProcessor,
-
 		ID: ID,
 
 		Clients:      make(map[client.Client]struct{}),
 		AddClient:    make(chan client.Client),
 		RemoveClient: make(chan client.Client),
 
-		MessageQueue: make(chan *client.ClientMessage),
+		MessageQueue: make(chan map[string]interface{}),
 
 		done: make(chan struct{}, 1),
 	}
@@ -63,9 +52,7 @@ func (r *Room) run(wg *sync.WaitGroup) {
 			}
 
 		case message := <-r.MessageQueue:
-			processedMessage := r.ProcessMessage(message)
-
-			r.broadcastMessage(processedMessage)
+			r.broadcastMessage(message)
 			if wg != nil {
 				wg.Done()
 			}

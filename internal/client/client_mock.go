@@ -19,10 +19,6 @@ func InitClientMock() {
 	}
 }
 
-func NewMock(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan *ClientMessage) Client {
-	return ClientMock
-}
-
 func (m *Mock) Read() {}
 
 //Write has to block execution so we have time to assert the clients map length in chatservice_test.go

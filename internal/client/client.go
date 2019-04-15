@@ -9,8 +9,6 @@ type roomIdentifier struct {
 	messageQueue chan *ClientMessage
 }
 
-type FactoryMethod func(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan *ClientMessage) Client
-
 type wsConn interface {
 	ReadJSON(v interface{}) error
 	WriteJSON(v interface{}) error
@@ -25,6 +23,7 @@ type Client interface {
 
 type client struct {
 	wsConn
+	messageProcessor
 
 	user         *user.User
 	MessageQueue chan map[string]interface{}
