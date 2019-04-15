@@ -10,8 +10,12 @@ type Mock struct {
 	mock.Mock
 }
 
-func (m *Mock) ProcessMessage(message *client.ClientMessage) (processedMessage map[string]interface{}) {
+func (m *Mock) ProcessMessage(message *client.ClientMessage) (processedMessage map[string]interface{}, err error) {
 	args := m.Called(message)
+	err = args.Error(1)
+	if err != nil {
+		return
+	}
 	processedMessage, _ = args.Get(0).(map[string]interface{})
-	return processedMessage
+	return
 }
