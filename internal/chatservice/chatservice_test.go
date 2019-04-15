@@ -121,7 +121,7 @@ func Test_HandleWSConn_Success(t *testing.T) {
 	client.InitClientMock()
 	go service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
 
-	client.ClientMock.ConnectionEnded() <- struct{}{}
+	client.ClientMock.ConnectionEnded() <- fmt.Errorf("err")
 
 	teardown()
 
