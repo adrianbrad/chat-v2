@@ -1,4 +1,4 @@
-package messageprocessor
+package message
 
 type MessageType int
 

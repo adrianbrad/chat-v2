@@ -1,10 +1,8 @@
-package messageprocessor
+package message
 
 import (
 	"fmt"
 	"time"
-
-	"github.com/adrianbrad/chat-v2/internal/client"
 )
 
 type messageRepository interface {
@@ -15,7 +13,7 @@ type MessageProcessor struct {
 	messageRepository messageRepository
 }
 
-func (m *MessageProcessor) ProcessMessage(message *client.ClientMessage) (processedMessage map[string]interface{}, err error) {
+func (m *MessageProcessor) ProcessMessage(message *UserMessage) (processedMessage map[string]interface{}, err error) {
 	messageContent := message.Content
 	messageType, ok := messageContent["action"].(string)
 	if !ok {

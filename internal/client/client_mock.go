@@ -10,12 +10,12 @@ var ClientMock *Mock
 
 type Mock struct {
 	mock.Mock
-	connectionEnded chan struct{}
+	connectionEnded chan error
 }
 
 func InitClientMock() {
 	ClientMock = &Mock{
-		connectionEnded: make(chan struct{}, 1),
+		connectionEnded: make(chan error, 1),
 	}
 }
 
@@ -30,7 +30,7 @@ func (m *Mock) AddToMessageQueue(message map[string]interface{}) {
 	_ = m.Called(message)
 }
 
-func (m *Mock) ConnectionEnded() chan struct{} {
+func (m *Mock) ConnectionEnded() chan error {
 	return m.connectionEnded
 }
 

@@ -124,6 +124,7 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 	defer func() {
 		c.removeClient <- client
 		c.rooms[roomID].RemoveClient <- client
+		client = nil
 	}()
 
 	//We block execution until the websocket connection ended

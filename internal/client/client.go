@@ -1,12 +1,14 @@
 package client
 
 import (
+	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/adrianbrad/chat-v2/internal/user"
+	log "github.com/sirupsen/logrus"
 )
 
 type roomIdentifier struct {
 	ID           string
-	messageQueue chan *ClientMessage
+	messageQueue chan map[string]interface{}
 }
 
 type wsConn interface {
@@ -17,7 +19,7 @@ type wsConn interface {
 
 type Client interface {
 	AddToMessageQueue(message map[string]interface{})
-	ConnectionEnded() chan struct{}
+	ConnectionEnded() chan error
 	GetUser() *user.User
 }
 
@@ -28,68 +30,69 @@ type client struct {
 	user         *user.User
 	MessageQueue chan map[string]interface{}
 
-	validWsConn     bool
-	connectionEnded chan struct{}
+	connectionEnded chan error
 
 	roomIdentifier roomIdentifier
 }
 
-func NewClient(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan *ClientMessage) Client {
-	c := &client{
-		wsConn:          wsConn,
-		user:            user,
-		validWsConn:     true,
-		connectionEnded: make(chan struct{}, 1),
-		roomIdentifier: roomIdentifier{
-			ID:           roomID,
-			messageQueue: roomMessageQueue,
-		},
+func (client *client) run() (err error) {
+	for {
+		select {
+		case err := <-client.connectionEnded:
+			log.Info("Ws connection ended")
+			return err
+		default:
+			client.read()
+			client.write()
+		}
 	}
-
-	go c.Read()
-	go c.Write()
-	return c
 }
 
 // Proccess messages sent by the websocket connection and forward them to the channel given as parameter
-func (client *client) Read() {
-	for client.validWsConn {
-		var receivedMessage map[string]interface{}
-		err := client.ReadJSON(&receivedMessage)
-		//if reading from socket fails the for loop is broken and the socket is closed
-		if err != nil {
-			client.signalEndConnection()
-			return
-		}
-
-		m := &ClientMessage{
-			Content: receivedMessage,
-			Client:  client,
-		}
-		client.roomIdentifier.messageQueue <- m
+func (client *client) read() {
+	var receivedMessage map[string]interface{}
+	err := client.ReadJSON(&receivedMessage)
+	//if reading from socket fails the for loop is broken and the socket is closed
+	if err != nil {
+		client.stop(err)
+		return
 	}
+
+	messageToBeProcessed := &message.UserMessage{
+		Content: receivedMessage,
+		User:    client.user,
+	}
+
+	processedMessage, err := client.ProcessMessage(messageToBeProcessed)
+	if err != nil {
+		processedMessage = map[string]interface{}{
+			"error": err.Error(),
+		}
+	}
+
+	client.roomIdentifier.messageQueue <- processedMessage
 }
 
 // Send messages to the websocket connection
-func (client *client) Write() {
-	for client.validWsConn {
-		for msg := range client.MessageQueue {
-			err := client.WriteJSON(msg)
-			//if reading from socket fails the for loop is broken and the socket is closed
-			if err != nil {
-				client.signalEndConnection()
-				return
-			}
+//another implementation is with for msg := range client.MessageQueue
+func (client *client) write() {
+	select {
+	case msg := <-client.MessageQueue:
+
+		err := client.WriteJSON(msg)
+		//if writing from socket fails the for loop is broken and the socket is closed
+		if err != nil {
+			client.stop(err)
 		}
+	default:
 	}
 }
 
-func (client *client) signalEndConnection() {
-	client.validWsConn = false
-	client.connectionEnded <- struct{}{}
+func (client *client) stop(err error) {
+	client.connectionEnded <- err
 }
 
-func (client *client) ConnectionEnded() chan struct{} {
+func (client *client) ConnectionEnded() chan error {
 	return client.connectionEnded
 }
 
