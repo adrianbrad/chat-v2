@@ -62,6 +62,7 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 
 		clients: make(map[client.Client]struct{}),
 		rooms:   rooms,
+		users:   make(map[string]*user.User),
 
 		addClient:    make(chan client.Client),
 		removeClient: make(chan client.Client),
@@ -118,6 +119,7 @@ func Test_HandleWSConn_Success(t *testing.T) {
 	_, _, _, _, service, teardown := setUp(2)
 
 	client.InitClientMock()
+	client.ClientMock.On("GetUser").Return(&user.User{})
 	go service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
 
 	client.ClientMock.ConnectionEnded() <- fmt.Errorf("err")

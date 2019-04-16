@@ -1,44 +1,24 @@
 package messagerepository
 
 import (
-	"database/sql"
 	"testing"
+
+	"github.com/adrianbrad/chat-v2/test"
 
 	"github.com/adrianbrad/chat-v2/internal/user"
 
-	"github.com/adrianbrad/chat-v2/configs"
-	d "github.com/adrianbrad/chat-v2/db"
 	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupDB() (db *sql.DB, err error) {
-	config, err := configs.LoadDBconfig("../../../configs/test-db-config.yaml")
-	if err != nil {
-		return
-	}
-	db, err = d.ConnectDB(config)
-	if err != nil {
-		return
-	}
-
-	err = d.ExecuteSQLfile(db, "../../../db/schema.sql")
-	if err != nil {
-		return
-	}
-
-	err = d.ExecuteSQLfile(db, "../../../db/insert-mock-data.sql")
-
-	return
-}
-
 func Test_MessageRepository(t *testing.T) {
 	t.Run("a=Insert_Fail", func(t *testing.T) {
-		db, err := setupDB()
+		db, err := test.SetupTestDB()
 		if err != nil {
 			t.Fatal(err.Error())
 		}
 		defer db.Close()
+
 		messageRepo := MessageRepositoryDB{db}
 
 		insert_fail_no_user(t, messageRepo)

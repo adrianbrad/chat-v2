@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/adrianbrad/chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/message"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +16,7 @@ func setUp(delta int) (room *Room, teardown func()) {
 	roomID := "testing"
 	room = &Room{
 		ID:           roomID,
-		MessageQueue: make(chan map[string]interface{}),
+		MessageQueue: make(chan message.Message),
 
 		Clients:      make(map[client.Client]struct{}),
 		AddClient:    make(chan client.Client),
@@ -86,7 +87,7 @@ func Test_AddMessageToMessageQueue(t *testing.T) {
 	room.Clients[client2] = struct{}{}
 	room.Clients[senderClient] = struct{}{}
 
-	message := map[string]interface{}{}
+	message := message.Message{}
 	room.MessageQueue <- message
 
 	teardown()
@@ -116,7 +117,7 @@ func Test_SendMessageAfterUserLeavesRoom(t *testing.T) {
 	room.Clients[client2] = struct{}{}
 	room.Clients[senderClient] = struct{}{}
 
-	message := map[string]interface{}{}
+	message := message.Message{}
 
 	room.RemoveClient <- client2
 

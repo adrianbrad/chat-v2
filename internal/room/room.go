@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/adrianbrad/chat-v2/internal/client"
+	"github.com/adrianbrad/chat-v2/internal/message"
 )
 
 type Room struct {
@@ -13,7 +14,7 @@ type Room struct {
 	AddClient    chan client.Client
 	RemoveClient chan client.Client
 
-	MessageQueue chan map[string]interface{}
+	MessageQueue chan message.Message
 
 	done chan struct{}
 }
@@ -27,7 +28,7 @@ func New(ID string) *Room {
 		AddClient:    make(chan client.Client),
 		RemoveClient: make(chan client.Client),
 
-		MessageQueue: make(chan map[string]interface{}),
+		MessageQueue: make(chan message.Message),
 
 		done: make(chan struct{}, 1),
 	}
@@ -70,7 +71,7 @@ func (r *Room) stop() {
 	r.done <- struct{}{}
 }
 
-func (r *Room) broadcastMessage(message map[string]interface{}) {
+func (r *Room) broadcastMessage(message message.Message) {
 	for client := range r.Clients {
 		client.AddToMessageQueue(message)
 	}

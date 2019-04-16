@@ -1,7 +1,13 @@
-DROP TABLE IF EXISTS messages;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS rooms CASCADE;
+DROP TABLE IF EXISTS permissions CASCADE;
+DROP TABLE IF EXISTS users_permissions CASCADE;
 
+CREATE TABLE permissions
+(
+  permission_id       TEXT NOT NULL CONSTRAINT permissions_pkey PRIMARY KEY
+);
 
 CREATE TABLE users
 (
@@ -11,9 +17,16 @@ CREATE TABLE users
   updated_at          TIMESTAMP
 );
 
+CREATE TABLE users_permissions
+(
+  user_id             TEXT NOT NULL CONSTRAINT FK_Users_Permissions_Users REFERENCES users,
+  permission_id       TEXT NOT NULL CONSTRAINT FK_Users_Permissions_Permissions REFERENCES permissions,
+  CONSTRAINT users_permissions_pkey PRIMARY KEY (user_id, permission_id)
+);
+
 CREATE TABLE rooms
 (
-  room_id           TEXT NOT NULL CONSTRAINT rooms_pkey PRIMARY KEY
+  room_id             TEXT NOT NULL CONSTRAINT rooms_pkey PRIMARY KEY
 );
 
 CREATE TABLE messages

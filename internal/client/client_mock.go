@@ -36,5 +36,6 @@ func (m *Mock) ConnectionEnded() chan error {
 }
 
 func (m *Mock) GetUser() *user.User {
-	return nil
+	args := m.Called()
+	return args.Get(0).(*user.User)
 }

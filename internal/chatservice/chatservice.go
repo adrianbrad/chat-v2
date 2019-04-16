@@ -27,6 +27,7 @@ type ChatService struct {
 
 	clients map[client.Client]struct{}
 	rooms   map[string]*room.Room
+	users   map[string]*user.User
 
 	addClient    chan client.Client
 	removeClient chan client.Client
@@ -54,6 +55,7 @@ func NewChatService(
 		clientFactory: clientFactory,
 
 		clients: make(map[client.Client]struct{}),
+		users:   make(map[string]*user.User),
 		rooms:   rooms,
 
 		addClient:    make(chan client.Client),
@@ -70,12 +72,14 @@ func (c *ChatService) run(wg *sync.WaitGroup) {
 		select {
 		case client := <-c.addClient:
 			c.clients[client] = struct{}{}
+			c.users[client.GetUser().ID] = client.GetUser()
 			if wg != nil {
 				wg.Done()
 			}
 
 		case client := <-c.removeClient:
 			delete(c.clients, client)
+			delete(c.users, client.GetUser().ID)
 			if wg != nil {
 				wg.Done()
 			}
