@@ -2,6 +2,7 @@ package userrepository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/lib/pq"
 
@@ -40,5 +41,54 @@ func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
 	for _, permission := range userPermissions {
 		u.Permissions[permission] = struct{}{}
 	}
+	return
+}
+
+func (r *UserRepositoryDB) Create(user user.User) (err error) {
+	res, err := r.Exec(`
+	INSERT INTO users(user_id, nickname)
+	VALUES($1, $2)
+	`, user.ID, user.Nickname)
+	if err != nil {
+		return err
+	}
+	if c, _ := res.RowsAffected(); c != 1 {
+		err = fmt.Errorf("Invalid number of rows affected by create: %d", c)
+		return
+	}
+
+	return
+}
+
+func (r *UserRepositoryDB) Update(user user.User) (err error) {
+	res, err := r.Exec(`
+	UPDATE users
+		SET nickname=$2, updated_at=now() 
+	WHERE user_id=$1
+	`, user.ID, user.Nickname)
+	if err != nil {
+		return err
+	}
+	if c, _ := res.RowsAffected(); c != 1 {
+		err = fmt.Errorf("Invalid number of rows affected by create: %d", c)
+		return
+	}
+
+	return
+}
+
+func (r *UserRepositoryDB) Delete(userID string) (err error) {
+	res, err := r.Exec(`
+	DELETE FROM users
+	WHERE user_id=$1
+	`, userID)
+	if err != nil {
+		return err
+	}
+	if c, _ := res.RowsAffected(); c != 1 {
+		err = fmt.Errorf("Invalid number of rows affected by delete: %d", c)
+		return
+	}
+
 	return
 }
