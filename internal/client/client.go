@@ -44,7 +44,11 @@ func (client *client) run() (err error) {
 			log.Info("Ws connection ended")
 			return err
 		default:
-			client.read()
+
+			if _, canSendMessage := client.user.Permissions[user.SendMessage.String()]; canSendMessage {
+				client.read()
+			}
+
 			client.write()
 		}
 	}

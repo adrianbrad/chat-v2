@@ -7,12 +7,12 @@ INSERT INTO "users" (user_id, nickname)
 
 INSERT INTO "permissions" (permission_id)
     VALUES 
-        ('talk'),
+        ('send_message'),
         ('run'),
         ('dance'),
         ('drink');
 
 INSERT INTO "users_permissions" (permission_id, user_id)
     VALUES 
-        ('talk', 'user_a'),
+        ('send_message', 'user_a'),
         ('run', 'user_a');

@@ -31,8 +31,8 @@ func getOneSuccess(t *testing.T, userRepo UserRepositoryDB) {
 		ID:       "user_a",
 		Nickname: "someone",
 		Permissions: map[string]struct{}{
-			"talk": struct{}{},
-			"run":  struct{}{},
+			"send_message": struct{}{},
+			"run":          struct{}{},
 		},
 	}
 	assert.Equal(t, expectedUser, *u)
