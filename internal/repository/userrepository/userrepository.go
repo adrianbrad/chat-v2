@@ -61,7 +61,12 @@ func (r *UserRepositoryDB) Create(user user.User) (err error) {
 }
 
 func (r *UserRepositoryDB) Update(user user.User) (err error) {
-	res, err := r.Exec(`
+	tx, err := r.Begin()
+	if err != nil {
+		return
+	}
+
+	res, err := tx.Exec(`
 	UPDATE users
 		SET nickname=$2, updated_at=now() 
 	WHERE user_id=$1
@@ -74,6 +79,37 @@ func (r *UserRepositoryDB) Update(user user.User) (err error) {
 		return
 	}
 
+	_, err = tx.Exec(`
+	DELETE FROM users_permissions
+	WHERE user_id=$1
+	`, user.ID)
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(pq.CopyIn("users_permissions", "user_id", "permission_id"))
+	if err != nil {
+		return
+	}
+
+	for permissionID, _ := range user.Permissions {
+		_, err = stmt.Exec(user.ID, permissionID)
+		if err != nil {
+			return
+		}
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		return
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		return
+	}
+
+	err = tx.Commit()
 	return
 }
 

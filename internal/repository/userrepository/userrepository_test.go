@@ -104,7 +104,14 @@ func insertOneFail(t *testing.T, userRepo UserRepositoryDB) {
 }
 
 func updateOneSuccess(t *testing.T, userRepo UserRepositoryDB) {
-	err := userRepo.Update(user.User{ID: "user_a", Nickname: "brad"})
+	err := userRepo.Update(
+		user.User{
+			ID:       "user_a",
+			Nickname: "brad",
+			Permissions: map[string]struct{}{
+				user.SendMessage.String(): struct{}{},
+			}})
+
 	assert.Nil(t, err)
 }
 
