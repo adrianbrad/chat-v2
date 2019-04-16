@@ -29,7 +29,6 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 		},
 		&room.Room{
 			ID: "room3",
-			// AddClient
 		},
 	}
 

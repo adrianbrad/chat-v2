@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/adrianbrad/chat-v2/internal/user"
 
 	"github.com/stretchr/testify/mock"
@@ -26,7 +27,7 @@ func (m *Mock) Write() {
 	_ = m.Called()
 }
 
-func (m *Mock) AddToMessageQueue(message map[string]interface{}) {
+func (m *Mock) AddToMessageQueue(message message.Message) {
 	_ = m.Called(message)
 }
 

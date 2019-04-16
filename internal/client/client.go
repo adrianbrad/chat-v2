@@ -8,7 +8,7 @@ import (
 
 type roomIdentifier struct {
 	ID           string
-	messageQueue chan map[string]interface{}
+	messageQueue chan message.Message
 }
 
 type wsConn interface {
@@ -18,7 +18,7 @@ type wsConn interface {
 }
 
 type Client interface {
-	AddToMessageQueue(message map[string]interface{})
+	AddToMessageQueue(message message.Message)
 	ConnectionEnded() chan error
 	GetUser() *user.User
 }
@@ -28,11 +28,13 @@ type client struct {
 	messageProcessor
 
 	user         *user.User
-	MessageQueue chan map[string]interface{}
+	MessageQueue chan message.Message
 
 	connectionEnded chan error
 
 	roomIdentifier roomIdentifier
+
+	bareMessageFactoryFunc func(message map[string]interface{}) (bareMessage message.BareMessage, err error)
 }
 
 func (client *client) run() (err error) {
@@ -58,23 +60,29 @@ func (client *client) read() {
 		return
 	}
 
-	messageToBeProcessed := &message.UserMessage{
-		Content: receivedMessage,
-		User:    client.user,
-	}
+	var processedMessage message.Message
+	defer func() {
+		client.roomIdentifier.messageQueue <- processedMessage
+	}()
 
-	processedMessage, err := client.ProcessMessage(messageToBeProcessed)
+	receivedMessage["room_id"] = client.roomIdentifier.ID
+
+	bareMessage, err := client.bareMessageFactoryFunc(receivedMessage)
 	if err != nil {
-		processedMessage = map[string]interface{}{
-			"error": err.Error(),
-		}
+		processedMessage.Error = err.Error()
+		return
 	}
 
-	client.roomIdentifier.messageQueue <- processedMessage
+	processedMessage, err = client.ProcessMessage(bareMessage)
+	if err != nil {
+		processedMessage.Error = err.Error()
+		return
+	}
+	return
 }
 
 // Send messages to the websocket connection
-//another implementation is with for msg := range client.MessageQueue
+// another implementation is with for msg := range client.MessageQueue
 func (client *client) write() {
 	select {
 	case msg := <-client.MessageQueue:
@@ -96,7 +104,7 @@ func (client *client) ConnectionEnded() chan error {
 	return client.connectionEnded
 }
 
-func (client *client) AddToMessageQueue(message map[string]interface{}) {
+func (client *client) AddToMessageQueue(message message.Message) {
 	client.MessageQueue <- message
 }
 

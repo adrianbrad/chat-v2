@@ -3,11 +3,11 @@ package message
 type MessageType int
 
 const (
-	Message MessageType = iota
+	Text MessageType = iota
 	Action
 )
 
-var messageTypes = [...]string{"message", "action"}
+var messageTypes = [...]string{"text", "action"}
 
 func (a MessageType) String() string {
 	return messageTypes[a]

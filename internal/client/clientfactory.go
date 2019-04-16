@@ -6,17 +6,17 @@ import (
 )
 
 type messageProcessor interface {
-	ProcessMessage(message *message.UserMessage) (processedMessage map[string]interface{}, err error)
+	ProcessMessage(bareMessage message.BareMessage) (message message.Message, err error)
 }
 
-type CreateFunc func(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan map[string]interface{}) Client
+type CreateFunc func(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan message.Message) Client
 
-func (c CreateFunc) Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan map[string]interface{}) Client {
+func (c CreateFunc) Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan message.Message) Client {
 	return c(wsConn, user, roomID, roomMessageQueue)
 }
 
 type Factory interface {
-	Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan map[string]interface{}) Client
+	Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan message.Message) Client
 }
 
 type factory struct {
@@ -29,7 +29,7 @@ func NewFactory(messageProcessor messageProcessor) Factory {
 	}
 }
 
-func (f *factory) Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan map[string]interface{}) Client {
+func (f *factory) Create(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan message.Message) Client {
 	c := &client{
 		wsConn:          wsConn,
 		user:            user,
@@ -47,7 +47,7 @@ func (f *factory) Create(wsConn wsConn, user *user.User, roomID string, roomMess
 }
 
 func NewTestingFactory() Factory {
-	return CreateFunc(func(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan map[string]interface{}) Client {
+	return CreateFunc(func(wsConn wsConn, user *user.User, roomID string, roomMessageQueue chan message.Message) Client {
 		return ClientMock
 	})
 }

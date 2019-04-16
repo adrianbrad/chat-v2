@@ -48,7 +48,7 @@ func Test_Client_Read_Error(t *testing.T) {
 func Test_Client_Read_ProcessMessageError(t *testing.T) {
 	wsConn := &wsConnMock{}
 	mp := message.NewMessageProcessorMock()
-	messageQueue := make(chan map[string]interface{}, 1)
+	messageQueue := make(chan message.Message, 1)
 
 	connectionEndedChan := make(chan error, 1)
 	c := &client{
@@ -57,20 +57,62 @@ func Test_Client_Read_ProcessMessageError(t *testing.T) {
 
 		connectionEnded: connectionEndedChan,
 		roomIdentifier:  roomIdentifier{messageQueue: messageQueue},
+
+		bareMessageFactoryFunc: func(message map[string]interface{}) (bareMessage message.BareMessage, err error) {
+			return
+		},
 	}
 
-	wsConn.On("ReadJSON", mock.Anything).Return(nil)
+	wsConn.On("ReadJSON", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		arg := args.Get(0).(*map[string]interface{})
+		*arg = map[string]interface{}{}
+	})
+
 	mp.On("ProcessMessage", mock.Anything).Return(nil, fmt.Errorf("err"))
 
 	c.read()
 	receivedMessage := <-messageQueue
 
-	assert.Equal(t, map[string]interface{}{"error": "err"}, receivedMessage)
+	expectedMessage := message.Message{}
+	expectedMessage.Error = "err"
+	assert.Equal(t, expectedMessage, receivedMessage)
+}
+
+func Test_Client_Read_NewBareMessageError(t *testing.T) {
+	wsConn := &wsConnMock{}
+	mp := message.NewMessageProcessorMock()
+	messageQueue := make(chan message.Message, 1)
+
+	connectionEndedChan := make(chan error, 1)
+	c := &client{
+		wsConn:           wsConn,
+		messageProcessor: mp,
+
+		connectionEnded: connectionEndedChan,
+		roomIdentifier:  roomIdentifier{messageQueue: messageQueue},
+
+		bareMessageFactoryFunc: func(message map[string]interface{}) (bareMessage message.BareMessage, err error) {
+			err = fmt.Errorf("err")
+			return
+		},
+	}
+
+	wsConn.On("ReadJSON", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		arg := args.Get(0).(*map[string]interface{})
+		*arg = map[string]interface{}{}
+	})
+
+	c.read()
+	receivedMessage := <-messageQueue
+
+	expectedMessage := message.Message{}
+	expectedMessage.Error = "err"
+	assert.Equal(t, expectedMessage, receivedMessage)
 }
 
 func Test_Client_Write_Error(t *testing.T) {
 	wsConn := &wsConnMock{}
-	messageQueue := make(chan map[string]interface{}, 1)
+	messageQueue := make(chan message.Message, 1)
 	connectionEndedChan := make(chan error, 1)
 
 	c := &client{
@@ -80,7 +122,7 @@ func Test_Client_Write_Error(t *testing.T) {
 	}
 
 	//we have to put a value in the channel in order to for loop over
-	c.AddToMessageQueue(map[string]interface{}{})
+	c.AddToMessageQueue(message.Message{})
 	wsConn.On("WriteJSON", mock.Anything).Return(fmt.Errorf("err"))
 	c.write()
 	connEnded := <-c.ConnectionEnded()
@@ -90,7 +132,7 @@ func Test_Client_Write_Error(t *testing.T) {
 
 func Test_Client_Write_Success(t *testing.T) {
 	wsConn := &wsConnMock{}
-	messageQueue := make(chan map[string]interface{}, 1)
+	messageQueue := make(chan message.Message, 1)
 	connectionEndedChan := make(chan error, 1)
 
 	c := &client{
@@ -100,14 +142,13 @@ func Test_Client_Write_Success(t *testing.T) {
 	}
 
 	//we have to put a value in the channel in order to for loop over
-	c.AddToMessageQueue(map[string]interface{}{})
+	c.AddToMessageQueue(message.Message{})
 	wsConn.On("WriteJSON", mock.Anything).Return(nil)
 	c.write()
 	select {
 	case <-c.ConnectionEnded():
 		t.Error("Connection should not be eneded")
 	default:
-		fmt.Println("ok")
 	}
 }
 
