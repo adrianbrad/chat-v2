@@ -16,7 +16,7 @@ func Test_UserRepository_GetOne(t *testing.T) {
 		}
 		defer db.Close()
 
-		userRepo := UserRepositoryDB{db}
+		userRepo := NewUserRepositoryDB(db)
 
 		getOneSuccess(t, userRepo)
 		getOneFail(t, userRepo)

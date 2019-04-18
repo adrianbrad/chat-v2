@@ -19,7 +19,9 @@ type UserService struct {
 }
 
 func NewUserService(userRepo userRepository) *UserService {
-	return &UserService{userRepo}
+	return &UserService{
+		userRepository: userRepo,
+	}
 }
 
 func (s *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {

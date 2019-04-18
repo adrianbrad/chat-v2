@@ -12,10 +12,34 @@ import (
 
 type UserRepositoryDB struct {
 	repository.DBRepository
+	users map[string]*user.User
+
+	usersMutation chan *user.User
 }
 
 func NewUserRepositoryDB(db *sql.DB) *UserRepositoryDB {
-	return &UserRepositoryDB{db}
+	r := &UserRepositoryDB{
+		DBRepository: db,
+		users:        make(map[string]*user.User),
+
+		usersMutation: make(chan *user.User),
+	}
+	go r.run()
+
+	return r
+}
+
+//if user exists in the map then make an update, otherwise add it to the map
+func (r *UserRepositoryDB) run() {
+	for incomingUser := range r.usersMutation {
+		user, userExists := r.users[incomingUser.ID]
+		if !userExists {
+			r.users[incomingUser.ID] = incomingUser
+			continue
+		}
+
+		user.Update(*incomingUser)
+	}
 }
 
 func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
@@ -41,6 +65,8 @@ func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
 	for _, permission := range userPermissions {
 		u.Permissions[permission] = struct{}{}
 	}
+
+	r.usersMutation <- u
 	return
 }
 
@@ -92,7 +118,7 @@ func (r *UserRepositoryDB) Update(user user.User) (err error) {
 		return
 	}
 
-	for permissionID, _ := range user.Permissions {
+	for permissionID := range user.Permissions {
 		_, err = stmt.Exec(user.ID, permissionID)
 		if err != nil {
 			return
@@ -110,6 +136,82 @@ func (r *UserRepositoryDB) Update(user user.User) (err error) {
 	}
 
 	err = tx.Commit()
+	return
+}
+
+func (r *UserRepositoryDB) UpdatePermissions(userID string, permissions []string) (err error) {
+	tx, err := r.Begin()
+	if err != nil {
+		return
+	}
+
+	_, err = tx.Exec(`
+	DELETE FROM users_permissions
+	WHERE user_id=$1
+	`, userID)
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(pq.CopyIn("users_permissions", "user_id", "permission_id"))
+	if err != nil {
+		return
+	}
+
+	permissionsMap := make(map[string]struct{})
+
+	for _, permissionID := range permissions {
+		_, err = stmt.Exec(userID, permissionID)
+		if err != nil {
+			return
+		}
+		permissionsMap[permissionID] = struct{}{}
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		return
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return
+	}
+	u := user.User{
+		ID:          userID,
+		Permissions: permissionsMap,
+	}
+
+	r.usersMutation <- &u
+	return
+}
+
+func (r *UserRepositoryDB) UpdateNickname(userID string, updatedNickname string) (err error) {
+	res, err := r.Exec(`
+	UPDATE users
+		SET nickname=$2, updated_at=now() 
+	WHERE user_id=$1
+	`, userID, updatedNickname)
+	if err != nil {
+		return err
+	}
+
+	if c, _ := res.RowsAffected(); c != 1 {
+		err = fmt.Errorf("Invalid number of rows affected by create: %d", c)
+		return
+	}
+
+	u := user.User{
+		ID:       userID,
+		Nickname: updatedNickname,
+	}
+
+	r.usersMutation <- &u
 	return
 }
 
