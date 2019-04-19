@@ -8,11 +8,10 @@ INSERT INTO "users" (user_id, nickname)
 INSERT INTO "permissions" (permission_id)
     VALUES 
         ('send_message'),
-        ('run'),
-        ('dance'),
-        ('drink');
+        ('send_money'),
+        ('mute_others');
 
 INSERT INTO "users_permissions" (permission_id, user_id)
     VALUES 
         ('send_message', 'user_a'),
-        ('run', 'user_a');
+        ('send_money', 'user_a');

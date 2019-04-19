@@ -62,7 +62,6 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 
 		clients: make(map[client.Client]struct{}),
 		rooms:   rooms,
-		users:   make(map[string]*user.User),
 
 		addClient:    make(chan client.Client),
 		removeClient: make(chan client.Client),

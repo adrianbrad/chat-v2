@@ -14,16 +14,24 @@ type UserRepositoryDB struct {
 	repository.DBRepository
 	users map[string]*user.User
 
-	usersMutation chan *user.User
+	addUser    chan *user.User
+	updateUser chan *user.User
+
+	repoStopped chan struct{}
+	stopRepo    chan struct{}
 }
 
 func NewUserRepositoryDB(db *sql.DB) *UserRepositoryDB {
 	r := &UserRepositoryDB{
 		DBRepository: db,
 		users:        make(map[string]*user.User),
-
-		usersMutation: make(chan *user.User),
 	}
+
+	r.addUser = make(chan *user.User)
+	r.updateUser = make(chan *user.User)
+	r.repoStopped = make(chan struct{}, 1)
+	r.stopRepo = make(chan struct{}, 1)
+
 	go r.run()
 
 	return r
@@ -31,15 +39,36 @@ func NewUserRepositoryDB(db *sql.DB) *UserRepositoryDB {
 
 //if user exists in the map then make an update, otherwise add it to the map
 func (r *UserRepositoryDB) run() {
-	for incomingUser := range r.usersMutation {
-		user, userExists := r.users[incomingUser.ID]
-		if !userExists {
-			r.users[incomingUser.ID] = incomingUser
+	for {
+		select {
+		case u := <-r.addUser:
+			r.users[u.ID] = u
 			continue
-		}
 
-		user.Update(*incomingUser)
+		default:
+			select {
+			case userUpdates := <-r.updateUser:
+				user, userExists := r.users[userUpdates.ID]
+				if userExists {
+					user.Update(*userUpdates)
+				}
+				continue
+
+			default:
+				select {
+				case <-r.stopRepo:
+					r.repoStopped <- struct{}{}
+					return
+				default:
+				}
+			}
+		}
 	}
+}
+
+func (r *UserRepositoryDB) stop() {
+	r.stopRepo <- struct{}{}
+	<-r.repoStopped
 }
 
 func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
@@ -66,7 +95,7 @@ func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
 		u.Permissions[permission] = struct{}{}
 	}
 
-	r.usersMutation <- u
+	r.addUser <- u
 	return
 }
 
@@ -136,6 +165,9 @@ func (r *UserRepositoryDB) Update(user user.User) (err error) {
 	}
 
 	err = tx.Commit()
+
+	r.updateUser <- &user
+
 	return
 }
 
@@ -187,7 +219,7 @@ func (r *UserRepositoryDB) UpdatePermissions(userID string, permissions []string
 		Permissions: permissionsMap,
 	}
 
-	r.usersMutation <- &u
+	r.updateUser <- &u
 	return
 }
 
@@ -211,7 +243,7 @@ func (r *UserRepositoryDB) UpdateNickname(userID string, updatedNickname string)
 		Nickname: updatedNickname,
 	}
 
-	r.usersMutation <- &u
+	r.updateUser <- &u
 	return
 }
 
