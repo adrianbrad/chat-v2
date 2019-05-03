@@ -1,7 +1,10 @@
 package chatservice
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"sync"
 
 	"github.com/adrianbrad/chat-v2/internal/client"
@@ -13,6 +16,7 @@ import (
 
 type userRepository interface {
 	GetOne(id string) (user *user.User, err error)
+	Create(user user.User) (err error)
 }
 
 type roomRepository interface {
@@ -129,5 +133,41 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 
 	//We block execution until the websocket connection ended
 	<-client.ConnectionEnded()
+	return
+}
+
+func (c *ChatService) AddUser(w http.ResponseWriter, r *http.Request) {
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	var user user.User
+	err = json.Unmarshal(bodyBytes, &user)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	err = c.userRepository.Create(user)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 	return
 }

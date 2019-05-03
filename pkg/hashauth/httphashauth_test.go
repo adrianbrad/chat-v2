@@ -45,7 +45,7 @@ func Test_HTTPHash_Success(t *testing.T) {
 		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
 			data = "some data"
 			h := hmac.New(sha256.New, []byte(secret))
-			hash = generateHash(h, []byte(data))
+			hash = GenerateHash(h, []byte(data))
 
 			return hash, data, nil, false
 		},

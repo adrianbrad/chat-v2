@@ -2,15 +2,15 @@ package user
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os/user"
 )
 
 type userRepository interface {
-	GetOne(userID string) (user *user.User, err error)
-	Create(user user.User) (err error)
-	Update(user user.User) (err error)
+	GetOne(userID string) (user *User, err error)
+	Create(user User) (err error)
+	Update(user User) (err error)
 	Delete(userID string) (err error)
 }
 
@@ -89,7 +89,7 @@ func (s *UserService) handleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user user.User
+	var user User
 	err = json.Unmarshal(bodyBytes, &user)
 	if err != nil {
 		http.Error(
@@ -134,9 +134,10 @@ func (s *UserService) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user user.User
+	var user User
 	err = json.Unmarshal(bodyBytes, &user)
 	if err != nil {
+		fmt.Println("WTF")
 		http.Error(
 			w,
 			err.Error(),

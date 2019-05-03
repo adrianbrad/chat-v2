@@ -39,7 +39,7 @@ func (a *OTPAuthenticator) GenerateToken(ID string) (token string, err error) {
 
 	token = createToken()
 
-	err = a.tokens.Add(token, ID, cache.DefaultExpiration)
+	err = a.tokens.Add(token, ID, cache.NoExpiration)
 	if err != nil {
 		token = ""
 		err = fmt.Errorf("Error while inserting token: %s with ID: %s, error: %s", token, ID, err.Error())

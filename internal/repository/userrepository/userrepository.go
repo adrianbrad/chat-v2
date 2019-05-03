@@ -100,7 +100,12 @@ func (r *UserRepositoryDB) GetOne(id string) (u *user.User, err error) {
 }
 
 func (r *UserRepositoryDB) Create(user user.User) (err error) {
-	res, err := r.Exec(`
+	tx, err := r.Begin()
+	if err != nil {
+		return
+	}
+
+	res, err := tx.Exec(`
 	INSERT INTO users(user_id, nickname)
 	VALUES($1, $2)
 	`, user.ID, user.Nickname)
@@ -111,6 +116,30 @@ func (r *UserRepositoryDB) Create(user user.User) (err error) {
 		err = fmt.Errorf("Invalid number of rows affected by create: %d", c)
 		return
 	}
+
+	stmt, err := tx.Prepare(pq.CopyIn("users_permissions", "user_id", "permission_id"))
+	if err != nil {
+		return
+	}
+
+	for permissionID := range user.Permissions {
+		_, err = stmt.Exec(user.ID, permissionID)
+		if err != nil {
+			return
+		}
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		return
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		return
+	}
+
+	err = tx.Commit()
 
 	return
 }

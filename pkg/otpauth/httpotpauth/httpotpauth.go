@@ -1,10 +1,11 @@
 package httpotpauth
 
 import (
-	"github.com/adrianbrad/chat-v2/pkg/otpauth/auth"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/adrianbrad/chat-v2/pkg/otpauth/auth"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -43,7 +44,7 @@ func (ha *HTTPOTPAuthenticator) ServeHTTP(w http.ResponseWriter, r *http.Request
 }
 
 func (ha *HTTPOTPAuthenticator) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("X-OTPAuth")
+	token := r.FormValue("key")
 
 	ID, err := ha.AuthenticateToken(token)
 	if err != nil {

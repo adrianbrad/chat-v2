@@ -24,7 +24,7 @@ func (a *HashAuthenticator) Authenticate(givenHash string, data string) (valid b
 	return
 }
 
-func generateHash(h hash.Hash, data []byte) (hash string) {
+func GenerateHash(h hash.Hash, data []byte) (hash string) {
 	h.Write(data)
 	hash = base64.StdEncoding.EncodeToString(h.Sum(nil))
 	h.Reset()

@@ -133,12 +133,11 @@ func Test_HandleAuthenticate_InvalidToken(t *testing.T) {
 		nil,
 	)
 
-	r, err := http.NewRequest(http.MethodGet, "", nil)
+	r, err := http.NewRequest(http.MethodGet, "?key=token", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rr := httptest.NewRecorder()
-	r.Header.Set("X-OTPAuth", "token")
 	a.ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
@@ -162,12 +161,11 @@ func Test_HandleAuthenticate_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := http.NewRequest(http.MethodGet, "", nil)
+	r, err := http.NewRequest(http.MethodGet, "?key=" + token, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rr := httptest.NewRecorder()
-	r.Header.Set("X-OTPAuth", token)
 	a.ServeHTTP(rr, r)
 
 	assert.Equal(t, "id", r.Header.Get("X-OTPAuth-ID"))
