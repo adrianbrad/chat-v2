@@ -1,11 +1,10 @@
 package chatservice
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/adrianbrad/chat-v2/internal/client"
 	"github.com/adrianbrad/chat-v2/internal/room"
@@ -20,7 +19,7 @@ type userRepository interface {
 }
 
 type roomRepository interface {
-	GetAll() []*room.Room
+	GetAll() (rooms []*room.Room, err error)
 }
 
 type ChatService struct {
@@ -44,12 +43,16 @@ func NewChatService(
 	clientFactory client.Factory,
 ) *ChatService {
 
-	repoRooms := roomRepository.GetAll()
+	repoRooms, err := roomRepository.GetAll()
+	if err != nil {
+		log.Fatal(err)
+	}
 	rooms := make(map[string]*room.Room, len(repoRooms))
 	for _, room := range repoRooms {
-		//! remember to init room channels
 		rooms[room.ID] = room
 	}
+
+	log.Infof("Retrieved following rooms from db: %s", rooms)
 
 	cs := &ChatService{
 		userRepository: userRepository,
@@ -97,9 +100,9 @@ func (c *ChatService) stop() {
 	c.stopChan <- struct{}{}
 }
 
-func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]interface{}) (err error) {
+func (c *ChatService) ProcessData(data map[string]interface{}) (processedData map[string]interface{}, err error) {
 	userID, ok := data["userID"].(string)
-	if !ok {
+	if !ok || userID == "" {
 		err = fmt.Errorf("User ID is not present in data or is not string, data: %+v", data)
 		return
 	}
@@ -121,53 +124,27 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 		return
 	}
 
+	processedData = make(map[string]interface{})
+	processedData["user"] = user
+	processedData["room"] = room
+	return
+}
+
+func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, processedData map[string]interface{}) (err error) {
+	room := processedData["room"].(*room.Room)
+	user := processedData["user"].(*user.User)
+
 	client := c.clientFactory.Create(wsConn, user, room.ID, room.MessageQueue)
 
 	c.addClient <- client
 	room.AddClient <- client
 	defer func() {
 		c.removeClient <- client
-		c.rooms[roomID].RemoveClient <- client
+		room.RemoveClient <- client
 		client = nil
 	}()
 
 	//We block execution until the websocket connection ended
 	<-client.ConnectionEnded()
-	return
-}
-
-func (c *ChatService) AddUser(w http.ResponseWriter, r *http.Request) {
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(
-			w,
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	var user user.User
-	err = json.Unmarshal(bodyBytes, &user)
-	if err != nil {
-		http.Error(
-			w,
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	err = c.userRepository.Create(user)
-	if err != nil {
-		http.Error(
-			w,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
 	return
 }

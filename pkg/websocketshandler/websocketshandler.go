@@ -7,8 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type service interface {
+type chatService interface {
 	HandleWSConn(wsConn *websocket.Conn, data map[string]interface{}) (err error)
+	ProcessData(data map[string]interface{}) (processedData map[string]interface{}, err error)
 }
 
 type upgrader interface {
@@ -16,18 +17,18 @@ type upgrader interface {
 }
 
 type WebsocketsHandler struct {
-	service
+	chatService            chatService
 	upgrader               upgrader
 	getDataFromRequestFunc func(r *http.Request) (data map[string]interface{}, err error)
 }
 
 func NewWebsocketsHandler(
-	serv service,
+	serv chatService,
 	upgrader upgrader,
 	getDataFunc func(r *http.Request) (data map[string]interface{}, err error),
 ) *WebsocketsHandler {
 	return &WebsocketsHandler{
-		service:                serv,
+		chatService:            serv,
 		upgrader:               upgrader,
 		getDataFromRequestFunc: getDataFunc,
 	}
@@ -41,7 +42,18 @@ func (wh *WebsocketsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"Could not get Data from websocket request",
 			http.StatusBadRequest,
 		)
-		log.Errorf("Error while data from websocket hadnshake request: %+v\n error: %s", r, err.Error())
+		log.Errorf("Error while retrieving data from websocket hadnshake request: %+v\n error: %s", r, err.Error())
+		return
+	}
+
+	processedData, err := wh.chatService.ProcessData(data)
+	if err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		log.Errorf("Error while processing data from websocket handshake request: %+v\n error: %s", r, err.Error())
 		return
 	}
 
@@ -57,7 +69,8 @@ func (wh *WebsocketsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ! this should be blocking as long as the websocket connection is valid
-	err = wh.service.HandleWSConn(wsConn, data)
+	//!FIXME in case of an error this will try to write to a hijacked WriteHeader as it was modified by the upgrader
+	err = wh.chatService.HandleWSConn(wsConn, processedData)
 	if err != nil {
 		http.Error(
 			w,

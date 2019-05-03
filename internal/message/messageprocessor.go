@@ -12,6 +12,12 @@ type MessageProcessor struct {
 	messageRepository messageRepository
 }
 
+func NewMessageProcessor(mr messageRepository) *MessageProcessor {
+	return &MessageProcessor{
+		messageRepository: mr,
+	}
+}
+
 func (m *MessageProcessor) ProcessMessage(bareMessage BareMessage) (message Message, err error) {
 	switch bareMessage.Action {
 	case Text.String():
