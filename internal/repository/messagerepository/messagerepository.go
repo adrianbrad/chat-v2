@@ -6,6 +6,7 @@ import (
 
 	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/adrianbrad/chat-v2/internal/repository"
+	log "github.com/sirupsen/logrus"
 )
 
 type MessageRepositoryDB struct {
@@ -39,5 +40,6 @@ func (r *MessageRepositoryDB) Insert(bareMesssage message.BareMessage) (message 
 	}
 
 	message.BareMessage = bareMesssage
+	log.Infof("Message: %+v added to database", message)
 	return
 }

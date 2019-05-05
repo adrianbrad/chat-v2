@@ -77,12 +77,16 @@ func (c *ChatService) run(wg *sync.WaitGroup) {
 		select {
 		case client := <-c.addClient:
 			c.clients[client] = struct{}{}
+			log.Infof("User %+v joined", *client.GetUser())
+
 			if wg != nil {
 				wg.Done()
 			}
 
 		case client := <-c.removeClient:
 			delete(c.clients, client)
+			log.Infof("User %+v left", *client.GetUser())
+
 			if wg != nil {
 				wg.Done()
 			}
@@ -145,6 +149,6 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, processedData map[str
 	}()
 
 	//We block execution until the websocket connection ended
-	<-client.ConnectionEnded()
+	err = <-client.ConnectionEnded()
 	return
 }

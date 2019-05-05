@@ -15,7 +15,6 @@ import (
 func Test_HTTPHash_ErrorWhileRetrievingData(t *testing.T) {
 	h := NewHTTPHashAuthenticator(
 		"",
-		nil,
 		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
 			err = fmt.Errorf("error")
 			return
@@ -24,7 +23,7 @@ func Test_HTTPHash_ErrorWhileRetrievingData(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	h.ServeHTTP(rr, nil)
+	h.Auth(nil).ServeHTTP(rr, nil)
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -40,8 +39,6 @@ func Test_HTTPHash_Success(t *testing.T) {
 	h := NewHTTPHashAuthenticator(
 		secret,
 
-		http.HandlerFunc(func(http.ResponseWriter, *http.Request) { return }), //returns status code 200
-
 		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
 			data = "some data"
 			h := hmac.New(sha256.New, []byte(secret))
@@ -53,7 +50,7 @@ func Test_HTTPHash_Success(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	h.ServeHTTP(rr, nil)
+	h.Auth(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { return })).ServeHTTP(rr, nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
@@ -62,8 +59,6 @@ func Test_HTTPHash_SkipAuth(t *testing.T) {
 	h := NewHTTPHashAuthenticator(
 		"",
 
-		http.HandlerFunc(func(http.ResponseWriter, *http.Request) { return }), //returns status code 200
-
 		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
 			return "", "", nil, true
 		},
@@ -71,7 +66,7 @@ func Test_HTTPHash_SkipAuth(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	h.ServeHTTP(rr, nil)
+	h.Auth(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { return })).ServeHTTP(rr, nil)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }

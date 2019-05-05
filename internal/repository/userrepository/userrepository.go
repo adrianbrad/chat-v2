@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/adrianbrad/chat-v2/internal/repository"
 	"github.com/adrianbrad/chat-v2/internal/user"
@@ -140,7 +141,11 @@ func (r *UserRepositoryDB) Create(user user.User) (err error) {
 	}
 
 	err = tx.Commit()
+	if err != nil {
+		return
+	}
 
+	log.Infof("Created User: %+v", user)
 	return
 }
 

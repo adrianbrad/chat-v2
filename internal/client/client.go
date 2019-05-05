@@ -3,7 +3,6 @@ package client
 import (
 	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/adrianbrad/chat-v2/internal/user"
-	log "github.com/sirupsen/logrus"
 )
 
 type roomIdentifier struct {
@@ -34,24 +33,32 @@ type client struct {
 
 	roomIdentifier roomIdentifier
 
-	bareMessageFactoryFunc func(message map[string]interface{}) (bareMessage message.BareMessage, err error)
+	bareMessageFactoryFunc BareMessageFactoryFunc
 }
 
 func (client *client) run() (err error) {
-	for {
-		select {
-		case err := <-client.connectionEnded:
-			log.Info("Ws connection ended")
-			return err
-		default:
+	// for {
+	// 	select {
+	// 	case err := <-client.connectionEnded:
+	// 		log.Info("Ws connection ended")
+	// 		return err
+	// 	default:
 
-			if _, canSendMessage := client.user.Permissions[user.SendMessage.String()]; canSendMessage {
-				client.read()
-			}
+	// 		if _, canSendMessage := client.user.Permissions[user.SendMessage.String()]; canSendMessage {
+	// 			client.read()
+	// 		}
 
-			client.write()
-		}
-	}
+	// 		client.write()
+	// 	}
+	// }
+	// var connEndedError error
+	// go func() {
+	// 	for connEndconnEndedError == nil {
+
+	// 	}
+	// }()
+	//TODO
+	return
 }
 
 // Proccess messages sent by the websocket connection and forward them to the channel given as parameter
@@ -70,7 +77,7 @@ func (client *client) read() {
 	}()
 
 	receivedMessage["room_id"] = client.roomIdentifier.ID
-
+	receivedMessage["user"] = client.GetUser()
 	bareMessage, err := client.bareMessageFactoryFunc(receivedMessage)
 	if err != nil {
 		processedMessage.Error = err.Error()
@@ -90,7 +97,6 @@ func (client *client) read() {
 func (client *client) write() {
 	select {
 	case msg := <-client.MessageQueue:
-
 		err := client.WriteJSON(msg)
 		//if writing from socket fails the for loop is broken and the socket is closed
 		if err != nil {

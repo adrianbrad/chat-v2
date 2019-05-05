@@ -1,107 +1,157 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/adrianbrad/chat-v2/internal/client"
 	"github.com/adrianbrad/chat-v2/internal/message"
-	"github.com/adrianbrad/chat-v2/internal/repository/roomrepository"
+	"github.com/adrianbrad/chat-v2/internal/user"
 
-	"github.com/adrianbrad/chat-v2/pkg/websocketshandler"
-	"github.com/gorilla/websocket"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/adrianbrad/chat-v2/internal/chatservice"
-	"github.com/adrianbrad/chat-v2/internal/repository/userrepository"
+	"github.com/adrianbrad/chat-v2/internal/server"
 	"github.com/adrianbrad/chat-v2/pkg/hashauth"
-	"github.com/adrianbrad/chat-v2/pkg/otpauth/httpotpauth"
-	"github.com/adrianbrad/chat-v2/test"
 	testutils "github.com/adrianbrad/chat-v2/test/utils"
+	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestAuthenticateTokenSuccess(t *testing.T) {
-	db, err := test.SetupTestDB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer db.Close()
+func requestToken(t *testing.T, userID string) (token string) {
+	body := []byte(userID)
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/auth", bytes.NewReader(body))
 
-	ur := userrepository.NewUserRepositoryDB(db)
-	rRepo := roomrepository.NewRoomRepositoryDB(db)
-	mp := message.NewMessageProcessor(nil)
-
-	cs := chatservice.NewChatService(ur, rRepo, client.NewFactory(mp))
-
-	upgrader := &websocket.Upgrader{}
-	websocketsHandler := websocketshandler.NewWebsocketsHandler(
-		cs,
-		upgrader,
-		func(r *http.Request) (data map[string]interface{}, err error) {
-			data = make(map[string]interface{})
-			data["userID"] = r.Header.Get("X-OTPAuth-ID")
-			data["roomID"] = r.FormValue("roomID")
-			return
-		},
-	)
-
-	authFunc := func(ID string) bool {
-		_, err := ur.GetOne(ID)
-		if err != nil {
-			return false
-		}
-		return true
-	}
-
-	tokenAuth := httpotpauth.NewHTTPOTPAuthenticator(10*time.Second, authFunc, websocketsHandler)
-
-	secret := "chat"
-	hAuth := hashauth.NewHTTPHashAuthenticator(
-		secret,
-
-		tokenAuth,
-
-		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
-			bodyBytes, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				return
-			}
-			data = string(bodyBytes)
-			hash = r.Header.Get("Authenticate")
-
-			r.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
-			return hash, data, nil, false
-		})
-
-	body := []byte("user_a")
-	r := testutils.NewTestRequest(t, http.MethodPost, "", bytes.NewReader(body))
-	rr := httptest.NewRecorder()
-
-	h := hmac.New(sha256.New, []byte(secret))
-	hash := hashauth.GenerateHash(h, body)
+	hash := hashauth.GenerateHash(hasher, body)
 
 	r.Header.Set("Authenticate", hash)
 
-	hAuth.ServeHTTP(rr, r)
+	resp, err := httpClient.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(b))
+	return resp.Header.Get("Authorization")
+}
 
-	authToken := rr.Header().Get("Authorization")
+func createUser(t *testing.T, user *user.User) {
+	userJsonBytes, _ := json.Marshal(user)
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/user", bytes.NewReader(userJsonBytes))
 
-	http.Handle("/ws-chat", tokenAuth)
-	go func() {
-		t.Fatal(http.ListenAndServe(":8080", nil))
-	}()
+	hash := hashauth.GenerateHash(hasher, userJsonBytes)
+	r.Header.Set("Authenticate", hash)
 
-	time.Sleep(time.Second / 2)
+	httpClient.Do(r)
+}
 
-	_, resp, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws-chat?key="+authToken+"&roomID=room_a", nil)
+func TestConnectionSuccess(t *testing.T) {
+	db := initDB(t)
+	defer db.Close()
+
+	initDependencies(db)
+
+	stopServer := startServer(
+		server.PathHandler{
+			Path:    "/auth",
+			Handler: httpOTPAuthenticator.Auth(nil)},
+
+		server.PathHandler{
+			Path:    "/chat",
+			Handler: httpOTPAuthenticator.Auth(websocketHandler)},
+	)
+	defer stopServer()
+
+	authToken := requestToken(t, "user_a")
+
+	_, resp, err := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken+"&roomID=room_a", nil)
 
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+}
+
+func TestChatInteractions(t *testing.T) {
+	db := initDB(t)
+	defer db.Close()
+
+	initDependencies(db)
+
+	stopServer := startServer(
+		server.PathHandler{
+			Path:    "/auth",
+			Handler: httpOTPAuthenticator.Auth(nil)},
+
+		server.PathHandler{
+			Path:    "/chat",
+			Handler: httpOTPAuthenticator.Auth(websocketHandler)},
+
+		server.PathHandler{
+			Path:    "/user",
+			Handler: hashAuthenticator.Auth(userService),
+		},
+	)
+	defer stopServer()
+
+	user1 := &user.User{
+		ID:       "test_user1",
+		Nickname: "TestUser169",
+		Permissions: map[string]struct{}{
+			user.SendMessage.String(): struct{}{},
+		},
+	}
+	user2 := &user.User{
+		ID:       "test_user2",
+		Nickname: "TestUser269",
+		Permissions: map[string]struct{}{
+			user.SendMessage.String(): struct{}{},
+		},
+	}
+	user3 := &user.User{
+		ID:       "test_user3",
+		Nickname: "TestUser369",
+	}
+
+	createUser(t, user1)
+	createUser(t, user2)
+	createUser(t, user3)
+
+	authToken1 := requestToken(t, user1.ID)
+	authToken2 := requestToken(t, user2.ID)
+	authToken3 := requestToken(t, user3.ID)
+
+	conn1, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken1+"&roomID=room_a", nil)
+	conn2, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken2+"&roomID=room_a", nil)
+	conn3, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken3+"&roomID=room_a", nil)
+
+	user1Message := message.BareMessage{
+		Action: message.Text.String(),
+		Body:   message.MessageBody{"hello"},
+		RoomID: "room_a",
+	}
+
+	conn1.WriteJSON(user1Message)
+
+	go func() {
+		var receivedMes map[string]interface{}
+		err := conn1.ReadJSON(&receivedMes)
+		fmt.Println("conn1")
+		fmt.Println(receivedMes, err)
+	}()
+
+	go func() {
+		var receivedMes map[string]interface{}
+		conn2.ReadJSON(&receivedMes)
+		fmt.Println("conn2")
+
+		fmt.Println(receivedMes)
+	}()
+
+	go func() {
+		var receivedMes map[string]interface{}
+		conn3.ReadJSON(&receivedMes)
+		fmt.Println("conn3")
+		fmt.Println(receivedMes)
+	}()
+
+	select {}
 }

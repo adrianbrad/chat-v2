@@ -15,7 +15,6 @@ func Test_ServeHTTP_InvalidMethod(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		nil,
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodDelete, "", nil)
@@ -24,7 +23,7 @@ func Test_ServeHTTP_InvalidMethod(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 
-	a.ServeHTTP(rr, r)
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
@@ -39,7 +38,6 @@ func Test_HandleGenerate_NilBody(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		func(string) bool { return false },
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodPost, "", nil)
@@ -48,7 +46,7 @@ func Test_HandleGenerate_NilBody(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 
-	a.ServeHTTP(rr, r)
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
@@ -63,7 +61,6 @@ func Test_HandleGenerate_InvalidID(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		func(string) bool { return false },
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodPost, "", strings.NewReader("69"))
@@ -72,7 +69,7 @@ func Test_HandleGenerate_InvalidID(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 
-	a.ServeHTTP(rr, r)
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
@@ -87,7 +84,6 @@ func Test_HandleGenerate_Success(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		func(string) bool { return true },
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodPost, "", strings.NewReader("69"))
@@ -96,7 +92,7 @@ func Test_HandleGenerate_Success(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 
-	a.ServeHTTP(rr, r)
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	assert.NotEmpty(t, rr.Header().Get("Authorization"))
@@ -106,7 +102,6 @@ func Test_HandleAuthenticate_NoTokenProvided(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		func(string) bool { return true },
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "", nil)
@@ -115,7 +110,7 @@ func Test_HandleAuthenticate_NoTokenProvided(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 
-	a.ServeHTTP(rr, r)
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
@@ -130,7 +125,6 @@ func Test_HandleAuthenticate_InvalidToken(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1,
 		func(string) bool { return false },
-		nil,
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "?key=token", nil)
@@ -138,7 +132,8 @@ func Test_HandleAuthenticate_InvalidToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	rr := httptest.NewRecorder()
-	a.ServeHTTP(rr, r)
+
+	a.Auth(nil).ServeHTTP(rr, r)
 
 	bodyBytes, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
@@ -153,7 +148,6 @@ func Test_HandleAuthenticate_Success(t *testing.T) {
 	a := NewHTTPOTPAuthenticator(
 		1*time.Second,
 		func(string) bool { return true },
-		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
 	)
 
 	token, err := a.GenerateToken("id")
@@ -161,12 +155,13 @@ func Test_HandleAuthenticate_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := http.NewRequest(http.MethodGet, "?key=" + token, nil)
+	r, err := http.NewRequest(http.MethodGet, "?key="+token, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rr := httptest.NewRecorder()
-	a.ServeHTTP(rr, r)
+
+	a.Auth(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(rr, r)
 
 	assert.Equal(t, "id", r.Header.Get("X-OTPAuth-ID"))
 }

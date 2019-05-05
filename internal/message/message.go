@@ -25,5 +25,13 @@ type Message struct {
 }
 
 func NewBareMessage(message map[string]interface{}) (bareMessage BareMessage, err error) {
-	return
+	messageBody := MessageBody{
+		Content: message["body"].(map[string]interface{})["content"].(string),
+	}
+	return BareMessage{
+		Action: message["action"].(string),
+		Body:   messageBody,
+		User:   message["user"].(*user.User),
+		RoomID: message["room_id"].(string),
+	}, nil
 }

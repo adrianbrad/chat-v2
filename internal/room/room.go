@@ -53,7 +53,7 @@ func (r *Room) run(wg *sync.WaitGroup) {
 			if wg != nil {
 				wg.Done()
 			}
-			log.Infof("Removed user with id: %s to room with id: %s", clientLeaves.GetUser().ID, r.ID)
+			log.Infof("Removed user with id: %s from room with id: %s", clientLeaves.GetUser().ID, r.ID)
 
 		case message := <-r.MessageQueue:
 			r.broadcastMessage(message)

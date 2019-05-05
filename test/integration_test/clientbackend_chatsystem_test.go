@@ -1,53 +1,26 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/adrianbrad/chat-v2/internal/repository/userrepository"
+	"github.com/adrianbrad/chat-v2/internal/server"
 	"github.com/adrianbrad/chat-v2/internal/user"
 	"github.com/adrianbrad/chat-v2/pkg/hashauth"
-	"github.com/adrianbrad/chat-v2/pkg/otpauth/httpotpauth"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/adrianbrad/chat-v2/test"
 	testutils "github.com/adrianbrad/chat-v2/test/utils"
 )
 
 func TestAddUserSucces(t *testing.T) {
-	db, err := test.SetupTestDB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	db := initDB(t)
 	defer db.Close()
 
-	ur := userrepository.NewUserRepositoryDB(db)
-
-	us := user.NewUserService(ur)
-
-	secret := "chat"
-	hAuth := hashauth.NewHTTPHashAuthenticator(
-		secret,
-
-		us,
-
-		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
-			bodyBytes, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				return
-			}
-			data = string(bodyBytes)
-			hash = r.Header.Get("Authenticate")
-
-			r.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
-			return hash, data, nil, false
-		})
+	initDependencies(db)
 
 	body, err := json.Marshal(map[string]interface{}{
 		"id":       "1",
@@ -57,17 +30,26 @@ func TestAddUserSucces(t *testing.T) {
 		},
 	})
 
-	r := testutils.NewTestRequest(t, http.MethodPost, "", bytes.NewReader(body))
-	rr := httptest.NewRecorder()
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/user", bytes.NewReader(body))
 
-	h := hmac.New(sha256.New, []byte(secret))
-	hash := hashauth.GenerateHash(h, body)
-
+	hash := hashauth.GenerateHash(hasher, body)
 	r.Header.Set("Authenticate", hash)
-	hAuth.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusCreated, rr.Code)
 
-	u, _ := ur.GetOne("1")
+	createUserHandler := hashAuthenticator.Auth(userService)
+
+	stopServer := startServer(server.PathHandler{
+		Path:    "/user",
+		Handler: createUserHandler})
+	defer stopServer()
+
+	resp, err := httpClient.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	u, _ := userRepository.GetOne("1")
 	assert.NotNil(t, u)
 	assert.Equal(t, u.ID, "1")
 	assert.Equal(t, u.Nickname, "chat_user")
@@ -77,53 +59,31 @@ func TestAddUserSucces(t *testing.T) {
 }
 
 func TestRequestTokenSuccess(t *testing.T) {
-	db, err := test.SetupTestDB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	db := initDB(t)
 	defer db.Close()
 
-	ur := userrepository.NewUserRepositoryDB(db)
-
-	authFunc := func(ID string) bool {
-		_, err := ur.GetOne(ID)
-		if err != nil {
-			return false
-		}
-		return true
-	}
-
-	tokenAuth := httpotpauth.NewHTTPOTPAuthenticator(10, authFunc, nil)
-
-	secret := "chat"
-	hAuth := hashauth.NewHTTPHashAuthenticator(
-		secret,
-
-		tokenAuth,
-
-		func(r *http.Request) (hash, data string, err error, skipAuth bool) {
-			bodyBytes, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				return
-			}
-			data = string(bodyBytes)
-			hash = r.Header.Get("Authenticate")
-
-			r.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
-			return hash, data, nil, false
-		})
+	initDependencies(db)
 
 	body := []byte("user_a")
-	r := testutils.NewTestRequest(t, http.MethodPost, "", bytes.NewReader(body))
-	rr := httptest.NewRecorder()
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/auth", bytes.NewReader(body))
 
 	h := hmac.New(sha256.New, []byte(secret))
 	hash := hashauth.GenerateHash(h, body)
 
 	r.Header.Set("Authenticate", hash)
 
-	hAuth.ServeHTTP(rr, r)
+	tokenGeneratorHandler := httpOTPAuthenticator.Auth(nil)
 
-	assert.Equal(t, http.StatusCreated, rr.Code)
-	assert.NotEmpty(t, rr.Header().Get("Authorization"))
+	stopServer := startServer(server.PathHandler{
+		Path:    "/auth",
+		Handler: tokenGeneratorHandler})
+	defer stopServer()
+
+	resp, err := httpClient.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.NotEmpty(t, resp.Header.Get("Authorization"))
 }

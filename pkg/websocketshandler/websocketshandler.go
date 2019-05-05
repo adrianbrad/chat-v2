@@ -72,12 +72,7 @@ func (wh *WebsocketsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//!FIXME in case of an error this will try to write to a hijacked WriteHeader as it was modified by the upgrader
 	err = wh.chatService.HandleWSConn(wsConn, processedData)
 	if err != nil {
-		http.Error(
-			w,
-			"Error while handling websocket session",
-			http.StatusInternalServerError,
-		)
-		log.Errorf("Error while handling websocket session with data: %s, error: %s", data, err.Error())
+		log.Errorf("Received following exit error from the wsConn with data: %s, %s", data, err.Error())
 		return
 	}
 }

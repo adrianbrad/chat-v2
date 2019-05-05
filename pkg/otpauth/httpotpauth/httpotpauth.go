@@ -20,30 +20,31 @@ type HTTPOTPAuthenticator struct {
 	next http.Handler
 }
 
-func NewHTTPOTPAuthenticator(duration time.Duration, authenticationFunc func(string) bool, next http.Handler) *HTTPOTPAuthenticator {
+func NewHTTPOTPAuthenticator(duration time.Duration, authenticationFunc func(string) bool) *HTTPOTPAuthenticator {
 	return &HTTPOTPAuthenticator{
 		auther: auth.NewOTPAuthenticatior(duration, authenticationFunc),
-		next:   next,
 	}
 }
 
-func (ha *HTTPOTPAuthenticator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost: // * generate token
-		ha.handleGenerate(w, r)
-	case http.MethodGet: // * authenticate token
-		ha.handleAuthenticate(w, r)
-	default:
-		http.Error(
-			w,
-			"Invalid method",
-			http.StatusMethodNotAllowed,
-		)
-		return
-	}
+func (ha *HTTPOTPAuthenticator) Auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost: // * generate token
+			ha.handleGenerate(w, r)
+		case http.MethodGet: // * authenticate token
+			ha.handleAuthenticate(w, r, next)
+		default:
+			http.Error(
+				w,
+				"Invalid method",
+				http.StatusMethodNotAllowed,
+			)
+			return
+		}
+	}))
 }
 
-func (ha *HTTPOTPAuthenticator) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
+func (ha *HTTPOTPAuthenticator) handleAuthenticate(w http.ResponseWriter, r *http.Request, next http.Handler) {
 	token := r.FormValue("key")
 
 	ID, err := ha.AuthenticateToken(token)
@@ -69,7 +70,7 @@ func (ha *HTTPOTPAuthenticator) handleAuthenticate(w http.ResponseWriter, r *htt
 	}
 
 	r.Header.Add("X-OTPAuth-ID", IDstr)
-	ha.next.ServeHTTP(w, r)
+	next.ServeHTTP(w, r)
 }
 
 func (ha *HTTPOTPAuthenticator) handleGenerate(w http.ResponseWriter, r *http.Request) {
