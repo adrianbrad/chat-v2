@@ -14,22 +14,20 @@ func main() {
 			return "Invalid nr of args"
 		}
 
-		userID := args[0]
+		key := args[0]
 		roomID := args[1]
+		//callback is a function that receives one parameter which is either an error or the chat object
 		callbackFunc := args[2]
 
-		chatWS, err := websocketwasm.Dial(getWSBaseURL() + "echo")
+		chatWS, err := websocketwasm.Dial(getWSBaseURL() + "key=" + key + "&roomID=" + roomID)
 
 		jsObj.Set("sendMessage", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 			chatWS.WriteString(args[0].String())
 		}))
 
-		// output is an object with an '.addMessage' method
-		jsObj.Set("setOutput", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			return 2
-		}))
-
+		//handl the callback func
 		startChat.Release()
+		js.Global().Set("startChat", js.Undefined())
 		return jsObj
 	})
 	js.Global().Set("startChat", startChat)
