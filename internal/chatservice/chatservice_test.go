@@ -87,8 +87,7 @@ func setUp(delta int) (roomsSlice []*room.Room, rr *roomrepository.Mock, usr *us
 
 func Test_HandleWSConn_InvalidUserID(t *testing.T) {
 	service := &ChatService{}
-
-	err := service.HandleWSConn(nil, nil)
+	_, err := service.ProcessData(nil)
 
 	assert.Equal(t, "User ID is not present in data or is not string, data: map[]", err.Error())
 }
@@ -96,7 +95,7 @@ func Test_HandleWSConn_InvalidUserID(t *testing.T) {
 func Test_HandleWSConn_InvalidRoomID(t *testing.T) {
 	service := &ChatService{}
 
-	err := service.HandleWSConn(nil, map[string]interface{}{"userID": "a"})
+	_, err := service.ProcessData(map[string]interface{}{"userID": "a"})
 
 	assert.Equal(t, "Room ID is not present in data or is not string, data: map[userID:a]", err.Error())
 }
@@ -110,7 +109,8 @@ func Test_HandleWSConn_ErrorRetrievingUser(t *testing.T) {
 	}
 
 	ur.On("GetOne", mock.Anything).Return(nil, fmt.Errorf("error given by test"))
-	err := service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "b"})
+
+	_, err := service.ProcessData(map[string]interface{}{"userID": "a", "roomID": "b"})
 	assert.Equal(t, "error given by test", err.Error())
 }
 
@@ -119,7 +119,7 @@ func Test_HandleWSConn_Success(t *testing.T) {
 
 	client.InitClientMock()
 	client.ClientMock.On("GetUser").Return(&user.User{})
-	go service.HandleWSConn(nil, map[string]interface{}{"userID": "a", "roomID": "room1"})
+	go service.HandleWSConn(nil, map[string]interface{}{"room": service.rooms["room1"], "user": &user.User{}})
 
 	client.ClientMock.ConnectionEnded() <- fmt.Errorf("err")
 

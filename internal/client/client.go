@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/adrianbrad/chat-v2/internal/message"
@@ -24,6 +25,7 @@ type Client interface {
 	AddToMessageQueue(message message.Message)
 	ConnectionEnded() chan error
 	GetUser() *user.User
+	Run() error
 }
 
 type client struct {
@@ -41,20 +43,26 @@ type client struct {
 
 	once sync.Once
 
-	reading bool
+	canRead chan struct{}
 }
 
-func (client *client) run() (err error) {
+func (client *client) Run() (err error) {
 	client.once = sync.Once{}
+	client.canRead = make(chan struct{}, 1)
+	client.canRead <- struct{}{}
 	for {
 		select {
 		case err := <-client.connectionEnded:
 			log.Info("Ws connection ended")
 			return err
 		default:
-
-			if !client.reading {
+			// if !client.reading {
+			// 	go client.read()
+			// }
+			select {
+			case <-client.canRead:
 				go client.read()
+			default:
 			}
 
 			client.write()
@@ -64,9 +72,6 @@ func (client *client) run() (err error) {
 
 // Proccess messages sent by the websocket connection and forward them to the channel given as parameter
 func (client *client) read() {
-	client.reading = true
-	defer func() { client.reading = false }()
-
 	var receivedMessage map[string]interface{}
 	err := client.ReadJSON(&receivedMessage)
 	//if reading from socket fails the for loop is broken and the socket is closed
@@ -74,6 +79,8 @@ func (client *client) read() {
 		client.stop(err)
 		return
 	}
+
+	defer func() { client.canRead <- struct{}{} }()
 
 	if _, canSendMessage := client.GetUser().Permissions[user.SendMessage.String()]; !canSendMessage {
 		return
@@ -103,16 +110,16 @@ func (client *client) read() {
 // Send messages to the websocket connection
 // another implementation is with for msg := range client.MessageQueue
 func (client *client) write() {
-	for {
-		select {
-		case msg := <-client.MessageQueue:
-			err := client.WriteJSON(msg)
-			//if writing from socket fails the for loop is broken and the socket is closed
-			if err != nil {
-				client.stop(err)
-			}
-		default:
+	select {
+	case msg := <-client.MessageQueue:
+		err := client.WriteJSON(msg)
+		//if writing from socket fails the for loop is broken and the socket is closed
+		if err != nil {
+			fmt.Println("write err")
+
+			client.stop(err)
 		}
+	default:
 	}
 }
 

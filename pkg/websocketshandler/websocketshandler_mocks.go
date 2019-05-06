@@ -17,6 +17,13 @@ func (s *serviceMock) HandleWSConn(wsConn *websocket.Conn, data map[string]inter
 	return
 }
 
+func (s *serviceMock) ProcessData(data map[string]interface{}) (processedData map[string]interface{}, err error) {
+	args := s.Called(data)
+	err = args.Error(1)
+	processedData = args.Get(0).(map[string]interface{})
+	return
+}
+
 type upgraderMock struct {
 	mock.Mock
 }

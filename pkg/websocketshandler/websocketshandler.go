@@ -67,7 +67,6 @@ func (wh *WebsocketsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("Error while upgrading to websocket: %s", err.Error())
 		return
 	}
-
 	// ! this should be blocking as long as the websocket connection is valid
 	//!FIXME in case of an error this will try to write to a hijacked WriteHeader as it was modified by the upgrader
 	err = wh.chatService.HandleWSConn(wsConn, processedData)

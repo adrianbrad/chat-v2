@@ -19,3 +19,9 @@ func (m *Mock) GetOne(id string) (usr *user.User, err error) {
 	usr = args.Get(0).(*user.User)
 	return
 }
+
+func (m *Mock) Create(user user.User) (err error) {
+	args := m.Called(user)
+	err = args.Error(0)
+	return
+}

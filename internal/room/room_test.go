@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/adrianbrad/chat-v2/internal/user"
+
 	"github.com/adrianbrad/chat-v2/internal/client"
 	"github.com/adrianbrad/chat-v2/internal/message"
 
@@ -47,6 +49,7 @@ func Test_AddClientToRoom(t *testing.T) {
 	room, teardown := setUp(1)
 
 	c := &client.Mock{}
+	c.On("GetUser").Return(&user.User{ID: "test_user"})
 	room.AddClient <- c
 
 	teardown()
@@ -58,6 +61,7 @@ func Test_RemoveClientFromRoom(t *testing.T) {
 	room, teardown := setUp(1)
 
 	c := &client.Mock{}
+	c.On("GetUser").Return(&user.User{ID: "test_user"})
 	room.Clients[c] = struct{}{}
 
 	room.RemoveClient <- c
@@ -71,6 +75,8 @@ func Test_AddMessageToMessageQueue(t *testing.T) {
 	room, teardown := setUp(1)
 	client1 := &client.Mock{}
 	client2 := &client.Mock{}
+	client1.On("GetUser").Return(&user.User{ID: "test_user1"})
+	client2.On("GetUser").Return(&user.User{ID: "test_user2"})
 
 	senderClient := &client.Mock{}
 
@@ -99,6 +105,8 @@ func Test_SendMessageAfterUserLeavesRoom(t *testing.T) {
 	room, teardown := setUp(2)
 	client1 := &client.Mock{}
 	client2 := &client.Mock{}
+	client1.On("GetUser").Return(&user.User{ID: "test_user1"})
+	client2.On("GetUser").Return(&user.User{ID: "test_user2"})
 
 	senderClient := &client.Mock{}
 

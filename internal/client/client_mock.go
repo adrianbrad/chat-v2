@@ -22,6 +22,8 @@ func InitClientMock() {
 
 func (m *Mock) Read() {}
 
+func (m *Mock) Run() error { return nil }
+
 //Write has to block execution so we have time to assert the clients map length in chatservice_test.go
 func (m *Mock) Write() {
 	_ = m.Called()

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/adrianbrad/chat-v2/internal/user"
+
 	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -54,6 +56,9 @@ func Test_Client_Read_ProcessMessageError(t *testing.T) {
 	c := &client{
 		wsConn:           wsConn,
 		messageProcessor: mp,
+		user: &user.User{
+			Permissions: map[string]struct{}{user.SendMessage.String(): struct{}{}},
+		},
 
 		connectionEnded: connectionEndedChan,
 		roomIdentifier:  roomIdentifier{messageQueue: messageQueue},
@@ -61,6 +66,7 @@ func Test_Client_Read_ProcessMessageError(t *testing.T) {
 		bareMessageFactoryFunc: func(message map[string]interface{}) (bareMessage message.BareMessage, err error) {
 			return
 		},
+		canRead: make(chan struct{}, 1),
 	}
 
 	wsConn.On("ReadJSON", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
@@ -87,6 +93,9 @@ func Test_Client_Read_NewBareMessageError(t *testing.T) {
 	c := &client{
 		wsConn:           wsConn,
 		messageProcessor: mp,
+		user: &user.User{
+			Permissions: map[string]struct{}{user.SendMessage.String(): struct{}{}},
+		},
 
 		connectionEnded: connectionEndedChan,
 		roomIdentifier:  roomIdentifier{messageQueue: messageQueue},
@@ -95,6 +104,7 @@ func Test_Client_Read_NewBareMessageError(t *testing.T) {
 			err = fmt.Errorf("err")
 			return
 		},
+		canRead: make(chan struct{}, 1),
 	}
 
 	wsConn.On("ReadJSON", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
@@ -160,7 +170,7 @@ func Test_Client_Run_Error(t *testing.T) {
 	}
 
 	c.ConnectionEnded() <- fmt.Errorf("err")
-	err := c.run()
+	err := c.Run()
 	assert.Equal(t, "err", err.Error())
 }
 
@@ -181,7 +191,7 @@ func Test_Client_Run_SuccessCycle(t *testing.T) {
 
 	err := make(chan error, 1)
 	go func() {
-		e := c.run()
+		e := c.Run()
 		err <- e
 	}()
 

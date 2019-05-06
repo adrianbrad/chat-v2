@@ -47,8 +47,6 @@ func (f *factory) Create(wsConn wsConn, user *user.User, roomID string, roomMess
 		bareMessageFactoryFunc: f.bareMessageFactoryFunc,
 	}
 
-	go c.run()
-
 	return c
 }
 

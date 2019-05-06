@@ -52,7 +52,7 @@ func NewChatService(
 		rooms[room.ID] = room
 	}
 
-	log.Infof("Retrieved following rooms from db: %s", rooms)
+	log.Infof("Retrieved following rooms from db: %+v", rooms)
 
 	cs := &ChatService{
 		userRepository: userRepository,
@@ -135,8 +135,16 @@ func (c *ChatService) ProcessData(data map[string]interface{}) (processedData ma
 }
 
 func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, processedData map[string]interface{}) (err error) {
-	room := processedData["room"].(*room.Room)
-	user := processedData["user"].(*user.User)
+	room, ok := processedData["room"].(*room.Room)
+	if !ok {
+		err = fmt.Errorf("Error while retrieving roomID from the message")
+		return
+	}
+	user, ok := processedData["user"].(*user.User)
+	if !ok {
+		err = fmt.Errorf("Error while retrieving user from the message")
+		return
+	}
 
 	client := c.clientFactory.Create(wsConn, user, room.ID, room.MessageQueue)
 
@@ -149,6 +157,6 @@ func (c *ChatService) HandleWSConn(wsConn *websocket.Conn, processedData map[str
 	}()
 
 	//We block execution until the websocket connection ended
-	err = <-client.ConnectionEnded()
+	err = client.Run()
 	return
 }
