@@ -1,6 +1,7 @@
 package message
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/adrianbrad/chat-v2/internal/user"
@@ -13,7 +14,7 @@ type MessageBody struct {
 type BareMessage struct {
 	Action string      `json:"action,omitempty"`
 	Body   MessageBody `json:"body,omitempty"`
-	User   *user.User  `json:"user,omitempt"`
+	User   *user.User  `json:"user"`
 	RoomID string      `json:"room_id,omitempty"`
 }
 
@@ -34,4 +35,19 @@ func NewBareMessage(message map[string]interface{}) (bareMessage BareMessage, er
 		User:   message["user"].(*user.User),
 		RoomID: message["room_id"].(string),
 	}, nil
+}
+
+func (m Message) MarshalJSON() ([]byte, error) {
+	type Alias Message
+	u := user.User{
+		ID:       m.User.ID,
+		Nickname: m.User.Nickname,
+	}
+	return json.Marshal(&struct {
+		User user.User `json:"user"`
+		Alias
+	}{
+		User:  u,
+		Alias: (Alias)(m),
+	})
 }

@@ -1,8 +1,12 @@
 package client
 
 import (
+	"sync"
+
 	"github.com/adrianbrad/chat-v2/internal/message"
 	"github.com/adrianbrad/chat-v2/internal/user"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type roomIdentifier struct {
@@ -34,40 +38,44 @@ type client struct {
 	roomIdentifier roomIdentifier
 
 	bareMessageFactoryFunc BareMessageFactoryFunc
+
+	once sync.Once
+
+	reading bool
 }
 
 func (client *client) run() (err error) {
-	// for {
-	// 	select {
-	// 	case err := <-client.connectionEnded:
-	// 		log.Info("Ws connection ended")
-	// 		return err
-	// 	default:
+	client.once = sync.Once{}
+	for {
+		select {
+		case err := <-client.connectionEnded:
+			log.Info("Ws connection ended")
+			return err
+		default:
 
-	// 		if _, canSendMessage := client.user.Permissions[user.SendMessage.String()]; canSendMessage {
-	// 			client.read()
-	// 		}
+			if !client.reading {
+				go client.read()
+			}
 
-	// 		client.write()
-	// 	}
-	// }
-	// var connEndedError error
-	// go func() {
-	// 	for connEndconnEndedError == nil {
-
-	// 	}
-	// }()
-	//TODO
-	return
+			client.write()
+		}
+	}
 }
 
 // Proccess messages sent by the websocket connection and forward them to the channel given as parameter
 func (client *client) read() {
+	client.reading = true
+	defer func() { client.reading = false }()
+
 	var receivedMessage map[string]interface{}
 	err := client.ReadJSON(&receivedMessage)
 	//if reading from socket fails the for loop is broken and the socket is closed
 	if err != nil {
 		client.stop(err)
+		return
+	}
+
+	if _, canSendMessage := client.GetUser().Permissions[user.SendMessage.String()]; !canSendMessage {
 		return
 	}
 
@@ -95,19 +103,23 @@ func (client *client) read() {
 // Send messages to the websocket connection
 // another implementation is with for msg := range client.MessageQueue
 func (client *client) write() {
-	select {
-	case msg := <-client.MessageQueue:
-		err := client.WriteJSON(msg)
-		//if writing from socket fails the for loop is broken and the socket is closed
-		if err != nil {
-			client.stop(err)
+	for {
+		select {
+		case msg := <-client.MessageQueue:
+			err := client.WriteJSON(msg)
+			//if writing from socket fails the for loop is broken and the socket is closed
+			if err != nil {
+				client.stop(err)
+			}
+		default:
 		}
-	default:
 	}
 }
 
 func (client *client) stop(err error) {
-	client.connectionEnded <- err
+	client.once.Do(func() {
+		client.connectionEnded <- err
+	})
 }
 
 func (client *client) ConnectionEnded() chan error {

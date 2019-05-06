@@ -1,9 +1,9 @@
 package user
 
 type User struct {
-	ID          string
-	Nickname    string
-	Permissions map[string]struct{}
+	ID          string              `json:"id"`
+	Nickname    string              `json:"nickname"`
+	Permissions map[string]struct{} `json:",omitempty"`
 }
 
 func (u *User) Update(userUpdates User) {

@@ -2,7 +2,6 @@ package user
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -137,7 +136,6 @@ func (s *UserService) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	var user User
 	err = json.Unmarshal(bodyBytes, &user)
 	if err != nil {
-		fmt.Println("WTF")
 		http.Error(
 			w,
 			err.Error(),

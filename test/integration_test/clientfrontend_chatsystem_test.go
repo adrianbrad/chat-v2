@@ -123,35 +123,37 @@ func TestChatInteractions(t *testing.T) {
 	conn2, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken2+"&roomID=room_a", nil)
 	conn3, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken3+"&roomID=room_a", nil)
 
-	user1Message := message.BareMessage{
+	messageToSend := message.BareMessage{
 		Action: message.Text.String(),
 		Body:   message.MessageBody{"hello"},
 		RoomID: "room_a",
 	}
 
-	conn1.WriteJSON(user1Message)
+	conn1.WriteJSON(messageToSend)
 
-	go func() {
-		var receivedMes map[string]interface{}
-		err := conn1.ReadJSON(&receivedMes)
-		fmt.Println("conn1")
-		fmt.Println(receivedMes, err)
-	}()
+	expectedMessage := map[string]interface{}{
+		"id":      float64(1),
+		"action":  messageToSend.Action,
+		"body":    map[string]interface{}{"content": messageToSend.Body.Content},
+		"room_id": messageToSend.RoomID,
+		"user": map[string]interface{}{
+			"id":       user1.ID,
+			"nickname": user1.Nickname,
+		},
+	}
 
-	go func() {
-		var receivedMes map[string]interface{}
-		conn2.ReadJSON(&receivedMes)
-		fmt.Println("conn2")
+	var receivedMes map[string]interface{}
+	conn1.ReadJSON(&receivedMes)
+	assert.NotEmpty(t, receivedMes["sent_at"])
+	expectedMessage["sent_at"] = receivedMes["sent_at"]
 
-		fmt.Println(receivedMes)
-	}()
+	assert.Equal(t, expectedMessage, receivedMes)
 
-	go func() {
-		var receivedMes map[string]interface{}
-		conn3.ReadJSON(&receivedMes)
-		fmt.Println("conn3")
-		fmt.Println(receivedMes)
-	}()
+	receivedMes = map[string]interface{}{}
+	conn2.ReadJSON(&receivedMes)
+	assert.Equal(t, expectedMessage, receivedMes)
 
-	select {}
+	receivedMes = map[string]interface{}{}
+	conn3.ReadJSON(&receivedMes)
+	assert.Equal(t, expectedMessage, receivedMes)
 }
