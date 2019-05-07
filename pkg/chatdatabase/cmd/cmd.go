@@ -121,6 +121,11 @@ func run(cmd *cobra.Command, args []string) {
 			Path:    "/user",
 			Handler: hashAuthenticator.Auth(userService),
 		},
+		//TODO
+		server.PathHandler{
+			Path:    "/wasm",
+			Handler: http.FileServer(http.Dir("./test/test")),
+		},
 	)
 
 	stopServer := make(chan os.Signal)
