@@ -2,7 +2,8 @@ INSERT INTO "rooms" (room_id)
     VALUES ('room_a');
 
 INSERT INTO "users" (user_id, nickname)
-    VALUES ('user_a', 'someone'), ('user_b', 'random');
+    VALUES ('user_a', 'someone'), ('user_b', 'random'),
+    ('debug', 'debugger');
 
 
 INSERT INTO "permissions" (permission_id)

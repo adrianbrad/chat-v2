@@ -77,11 +77,6 @@ func initDependencies(db *sql.DB) {
 	}
 
 	websocketUpgrader = &websocket.Upgrader{}
-	websocketshandler.NewWebsocketsHandler(
-		chatService,
-		websocketUpgrader,
-		getDataFromWebsocketRequestFunc,
-	)
 
 	websocketHandler = websocketshandler.NewWebsocketsHandler(
 		chatService,

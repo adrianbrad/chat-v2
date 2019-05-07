@@ -21,7 +21,6 @@ func Test_UserRepository_GetOne(t *testing.T) {
 		getOneSuccess(t, userRepo)
 		getOneFail(t, userRepo)
 	})
-
 }
 
 func Test_UserRepository_Create(t *testing.T) {

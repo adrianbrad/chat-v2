@@ -50,6 +50,12 @@ func (client *client) Run() (err error) {
 	client.once = sync.Once{}
 	client.canRead = make(chan struct{}, 1)
 	client.canRead <- struct{}{}
+
+	err = client.WriteJSON(client.user)
+	if err != nil {
+		client.connectionEnded <- err
+	}
+
 	for {
 		select {
 		case err := <-client.connectionEnded:
