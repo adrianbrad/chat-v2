@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -18,12 +20,15 @@ func Run(port string, mux *http.ServeMux, stop chan os.Signal, timeout time.Dura
 		Addr:    port,
 		Handler: mux,
 	}
+	serverShutdown := make(chan struct{}, 1)
+	startServer(server, serverShutdown)
 
-	startServer(server)
+	signal.Notify(stop, syscall.SIGTERM)
+	signal.Notify(stop, syscall.SIGINT)
 
-	signal.Notify(stop, os.Interrupt)
+	a := <-stop
 
-	<-stop
+	fmt.Println(a.String())
 
 	log.Infof("Server shutting down")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -31,16 +36,19 @@ func Run(port string, mux *http.ServeMux, stop chan os.Signal, timeout time.Dura
 	if err := server.Shutdown(ctx); err != nil {
 		log.Errorf("Error while shutting down server: %s", err.Error())
 	}
+	<-serverShutdown
 }
 
-func startServer(server *http.Server) {
+func startServer(server *http.Server, serverShutdown chan struct{}) {
 	log.Infof("Starting server on %s", server.Addr)
 	go func() {
 		e := server.ListenAndServe()
+
 		if e.Error() != "http: Server closed" {
 			log.Fatal(e)
 		} else {
 			log.Info(e)
 		}
+		serverShutdown <- struct{}{}
 	}()
 }

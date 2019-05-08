@@ -50,9 +50,9 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	log.Infof("Successfully connected to db")
 
-	fmt.Println(dbConfig.MigrationVersion)
 	err = d.SetMigrationVersion(filepath.Join(appConfig.Basedir, "db", "migrations"), db, dbConfig.MigrationVersion)
 	if err != nil {
+		db.Close()
 		log.Fatal(err)
 	}
 
@@ -144,6 +144,8 @@ func run(cmd *cobra.Command, args []string) {
 
 	stopServer := make(chan os.Signal)
 	server.Run(appConfig.Port, mux, stopServer, 3)
+	db.Close()
+	os.Exit(0)
 }
 
 func loadConfigs(cmd *cobra.Command) (dbConfig configs.DBconfig, appConfig configs.ApplicationConfig) {
