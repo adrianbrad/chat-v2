@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -132,11 +131,9 @@ func run(cmd *cobra.Command, args []string) {
 			Path:    "/user",
 			Handler: hashAuthenticator.Auth(userService),
 		},
-		//TODO
 		server.PathHandler{
 			Path: "/client/main.wasm",
 			Handler: cors.Default().Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Println(filepath.Join(appConfig.Basedir, "client", "wasm", "main.wasm"))
 				http.ServeFile(w, r, filepath.Join(appConfig.Basedir, "client", "wasm", "main.wasm"))
 			})),
 		},

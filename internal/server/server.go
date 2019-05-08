@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,9 +25,7 @@ func Run(port string, mux *http.ServeMux, stop chan os.Signal, timeout time.Dura
 	signal.Notify(stop, syscall.SIGTERM)
 	signal.Notify(stop, syscall.SIGINT)
 
-	a := <-stop
-
-	fmt.Println(a.String())
+	<-stop
 
 	log.Infof("Server shutting down")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -43,7 +40,6 @@ func startServer(server *http.Server, serverShutdown chan struct{}) {
 	log.Infof("Starting server on %s", server.Addr)
 	go func() {
 		e := server.ListenAndServe()
-
 		if e.Error() != "http: Server closed" {
 			log.Fatal(e)
 		} else {
