@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"bytes"
-	"io/ioutil"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/rs/cors"
@@ -104,32 +104,43 @@ func run(cmd *cobra.Command, args []string) {
 	)
 
 	retrieveDataForHashAuthFunc := func(r *http.Request) (hash, data string, err error, skipAuth bool) {
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		epochTimeString := r.Header.Get("Date")
+		if epochTimeString == "" {
+			err = fmt.Errorf("No date passed as header")
+			return
+		}
+
+		i, err := strconv.ParseInt(epochTimeString, 10, 64)
 		if err != nil {
 			return
 		}
-		data = string(bodyBytes)
-		hash = r.Header.Get("Authenticate")
+		tm := time.Unix(i, 0)
 
-		r.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
+		if time.Since(tm).Seconds() > 5 {
+			err = fmt.Errorf("Request is too old")
+			return
+		}
+		hash = r.Header.Get("Authorization")
+
+		data = epochTimeString
 		return hash, data, nil, false
 	}
 
-	hashAuthenticator := hashauth.NewHTTPHashAuthenticator(
+	httpHashAuthenticator := hashauth.NewHTTPHashAuthenticator(
 		appConfig.Secret,
 		retrieveDataForHashAuthFunc,
 	)
 	mux := server.NewMux(server.PathHandler{
 		Path:    "/auth",
-		Handler: httpOTPAuthenticator.Auth(nil)},
+		Handler: httpHashAuthenticator.Auth(httpOTPAuthenticator.Auth(nil))},
 
 		server.PathHandler{
 			Path:    "/chat",
 			Handler: httpOTPAuthenticator.Auth(websocketHandler)},
 
 		server.PathHandler{
-			Path:    "/user",
-			Handler: hashAuthenticator.Auth(userService),
+			Path:    "/users",
+			Handler: httpHashAuthenticator.Auth(userService),
 		},
 		server.PathHandler{
 			Path: "/client/main.wasm",

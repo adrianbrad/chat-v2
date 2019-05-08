@@ -30,7 +30,7 @@ func TestAddUserSucces(t *testing.T) {
 		},
 	})
 
-	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/user", bytes.NewReader(body))
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/users", bytes.NewReader(body))
 
 	hash := hashauth.GenerateHash(hasher, body)
 	r.Header.Set("Authenticate", hash)
@@ -38,7 +38,7 @@ func TestAddUserSucces(t *testing.T) {
 	createUserHandler := hashAuthenticator.Auth(userService)
 
 	stopServer := startServer(server.PathHandler{
-		Path:    "/user",
+		Path:    "/users",
 		Handler: createUserHandler})
 	defer stopServer()
 

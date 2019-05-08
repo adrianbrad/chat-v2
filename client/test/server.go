@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"flag"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/adrianbrad/chat-v2/pkg/hashauth"
 
@@ -34,14 +36,15 @@ func main() {
 
 		req, _ := http.NewRequest("POST", "http://localhost:8080/auth", bytes.NewReader([]byte(user)))
 
+		timeNow := strconv.Itoa(int(time.Now().Unix()))
 		h := hmac.New(sha256.New, []byte("chat"))
-		hash := hashauth.GenerateHash(h, []byte(user))
+		hash := hashauth.GenerateHash(h, []byte(timeNow))
 
-		r.Header.Set("Authenticate", hash)
+		req.Header.Set("Authorization", hash)
+		req.Header.Set("Date", timeNow)
 
 		httpClient := &http.Client{}
 		resp, _ := httpClient.Do(req)
-
 		w.Write([]byte(resp.Header.Get("Authorization")))
 	})
 

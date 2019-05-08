@@ -38,7 +38,6 @@ func (h *HTTPHashAuthenticator) Auth(next http.Handler) http.Handler {
 				log.Errorf("Error: %s while retrieving data from request: %+v", err.Error(), r)
 				return
 			}
-
 			valid := h.Authenticate(hash, data)
 			if !valid {
 				http.Error(
@@ -46,6 +45,7 @@ func (h *HTTPHashAuthenticator) Auth(next http.Handler) http.Handler {
 					"Invalid hash",
 					http.StatusUnauthorized,
 				)
+				log.Errorf("Invalid hash: %s", hash)
 				return
 			}
 		}

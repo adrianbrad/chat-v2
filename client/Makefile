@@ -13,7 +13,7 @@ TEST_BINARY_NAME=test.wasm
 build:
 	GOOS=js GOARCH=wasm $(GOBUILD) -o ./wasm/$(BINARY_NAME) -v
 
-starttest:
+runtest:
 	GOOS=js GOARCH=wasm $(GOTEST) $(TESTDIRECTORY) -c -o $(TESTDIRECTORY)/$(TEST_BINARY_NAME)
 ifneq ($(PID),) 
 	kill $(PID)

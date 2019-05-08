@@ -37,7 +37,7 @@ func requestToken(t *testing.T, userID string) (token string) {
 
 func createUser(t *testing.T, user *user.User) {
 	userJsonBytes, _ := json.Marshal(user)
-	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/user", bytes.NewReader(userJsonBytes))
+	r := testutils.NewTestRequest(t, http.MethodPost, baseAddress+"/users", bytes.NewReader(userJsonBytes))
 
 	hash := hashauth.GenerateHash(hasher, userJsonBytes)
 	r.Header.Set("Authenticate", hash)
@@ -86,7 +86,7 @@ func TestChatInteractions(t *testing.T) {
 			Handler: httpOTPAuthenticator.Auth(websocketHandler)},
 
 		server.PathHandler{
-			Path:    "/user",
+			Path:    "/users",
 			Handler: hashAuthenticator.Auth(userService),
 		},
 	)
