@@ -1,0 +1,4 @@
+github.com/LinearZoetrope/testevents v0.0.0-20140518073619-e1da324038dc h1:QtsRF0vgx/JFDAzvnIGhvt+I0z6GI9jivcKVkLmAv0s=
+github.com/LinearZoetrope/testevents v0.0.0-20140518073619-e1da324038dc/go.mod h1:QD/8DqLoTvD75v0qK78M13wzSV0YN03I1Z1CglIgf4Q=
+github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
+github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
