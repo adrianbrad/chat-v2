@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/rs/cors"
 
 	"github.com/adrianbrad/chat-v2/configs"
 	"github.com/adrianbrad/chat-v2/db"
@@ -34,6 +38,7 @@ func NewChatDatabaseCommand() (cmd *cobra.Command) {
 	}
 	cmd.Flags().StringP("dbconfig", "d", "", "Set database config file")
 	cmd.Flags().StringP("appconfig", "a", "", "Set application config file")
+	cmd.Flags().StringP("basedir", "b", "", "Set application base directory file")
 	return cmd
 }
 
@@ -108,7 +113,6 @@ func run(cmd *cobra.Command, args []string) {
 		appConfig.Secret,
 		retrieveDataForHashAuthFunc,
 	)
-
 	mux := server.NewMux(server.PathHandler{
 		Path:    "/auth",
 		Handler: httpOTPAuthenticator.Auth(nil)},
@@ -123,8 +127,11 @@ func run(cmd *cobra.Command, args []string) {
 		},
 		//TODO
 		server.PathHandler{
-			Path:    "/wasm",
-			Handler: http.FileServer(http.Dir("./test/test")),
+			Path: "/client/main.wasm",
+			Handler: cors.Default().Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Println(filepath.Join(appConfig.Basedir, "client", "wasm", "main.wasm"))
+				http.ServeFile(w, r, filepath.Join(appConfig.Basedir, "client", "wasm", "main.wasm"))
+			})),
 		},
 	)
 
@@ -133,17 +140,21 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func loadConfigs(cmd *cobra.Command) (dbConfig configs.DBconfig, appConfig configs.ApplicationConfig) {
+	basedir, _ := cmd.Flags().GetString("basedir")
+
 	dbConfigFile, _ := cmd.Flags().GetString("dbconfig")
-	dbConfig, err := configs.LoadDBconfig(dbConfigFile)
+	dbConfig, err := configs.LoadDBconfig(filepath.Join(basedir, "configs", dbConfigFile))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	appConfigfile, _ := cmd.Flags().GetString("appconfig")
-	appConfig, err = configs.LoadAppconfig(appConfigfile)
+	appConfig, err = configs.LoadAppconfig(filepath.Join(basedir, "configs", appConfigfile))
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	appConfig.Basedir = basedir
 
 	log.Infof("Using db config file: %s\nUsing app config file: %s", dbConfigFile, appConfigfile)
 	return

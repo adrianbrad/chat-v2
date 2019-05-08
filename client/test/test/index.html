@@ -8,7 +8,7 @@
 		<script src="wasm_exec.js"></script>
 		<script>
 			const go = new Go();
-			WebAssembly.instantiateStreaming(fetch("chatclientapi.wasm"), go.importObject).then(res => {
+			WebAssembly.instantiateStreaming(fetch("test.wasm"), go.importObject).then(res => {
 				go.run(res.instance);
 			});
 		</script>

@@ -7,14 +7,14 @@ PID=$(shell lsof -t -i :3000 -s TCP:LISTEN)
 
 
 # Binary names
-BINARY_NAME=chatclientapi.wasm
-TEST_BINARY_NAME=testchatclientapi.wasm
+BINARY_NAME=main.wasm
+TEST_BINARY_NAME=test.wasm
 
 build:
 	GOOS=js GOARCH=wasm $(GOBUILD) -o ./wasm/$(BINARY_NAME) -v
 
 starttest:
-	GOOS=js GOARCH=wasm $(GOTEST) $(TESTDIRECTORY) -c -o $(TESTDIRECTORY)/$(BINARY_NAME)
+	GOOS=js GOARCH=wasm $(GOTEST) $(TESTDIRECTORY) -c -o $(TESTDIRECTORY)/$(TEST_BINARY_NAME)
 ifneq ($(PID),) 
 	kill $(PID)
 endif 

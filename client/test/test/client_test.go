@@ -19,7 +19,7 @@ func TestWSConnection(t_ *testing.T) {
 
 	setOnMessageFunc := js.FuncOf(func(this js.Value, args []js.Value) interface {} {
 		fmt.Println("Custom on mes func")
-		fmt.Println(args[0])
+		fmt.Println(args[0].Get("data"))
 		done <-struct{}{}
 		return nil
 	})

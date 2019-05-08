@@ -19,8 +19,9 @@ func main() {
 	go func() {
 		command := cmd.NewChatDatabaseCommand()
 		command.SetArgs([]string{
-			"-d=../configs/test-db-config.yaml",
-			"-a=../configs/application-config.yaml",
+			"-b=/Users/adrianbrad/workspace/repos/chat-v2",
+			"-d=test-db-config.yaml",
+			"-a=application-config.yaml",
 		})
 		command.Execute()
 		stop <- struct{}{}
