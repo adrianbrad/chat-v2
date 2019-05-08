@@ -51,20 +51,21 @@ func (client *client) Run() (err error) {
 	client.canRead = make(chan struct{}, 1)
 	client.canRead <- struct{}{}
 
-	err = client.WriteJSON(client.user)
-	if err != nil {
-		client.connectionEnded <- err
+	doOnce := sync.Once{}
+	sendUserInfo := func() {
+		err = client.WriteJSON(client.user)
+		if err != nil {
+			client.connectionEnded <- err
+		}
 	}
-
 	for {
 		select {
 		case err := <-client.connectionEnded:
 			log.Info("Ws connection ended")
 			return err
+
 		default:
-			// if !client.reading {
-			// 	go client.read()
-			// }
+			doOnce.Do(sendUserInfo)
 			select {
 			case <-client.canRead:
 				go client.read()

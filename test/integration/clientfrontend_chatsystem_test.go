@@ -123,6 +123,11 @@ func TestChatInteractions(t *testing.T) {
 	conn2, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken2+"&roomID=room_a", nil)
 	conn3, _, _ := websocket.DefaultDialer.Dial("ws://localhost:8080/chat?key="+authToken3+"&roomID=room_a", nil)
 
+	var userInfo map[string]interface{}
+	conn1.ReadJSON(&userInfo)
+	conn2.ReadJSON(&userInfo)
+	conn3.ReadJSON(&userInfo)
+
 	messageToSend := message.BareMessage{
 		Action: message.Text.String(),
 		Body:   message.MessageBody{"hello"},
