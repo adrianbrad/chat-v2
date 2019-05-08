@@ -3,3 +3,4 @@ port: 5432
 user: admin
 pass: admin
 name: chat-v2-test
+migrationversion: 1

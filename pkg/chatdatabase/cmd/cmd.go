@@ -50,10 +50,13 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	log.Infof("Successfully connected to db")
 
-	err = d.RunMigrations(filepath.Join(appConfig.Basedir, "db", "migrations"), db)
+	fmt.Println(dbConfig.MigrationVersion)
+	err = d.SetMigrationVersion(filepath.Join(appConfig.Basedir, "db", "migrations"), db, dbConfig.MigrationVersion)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Infof("Using migration version %d", dbConfig.MigrationVersion)
 
 	userRepository := userrepository.NewUserRepositoryDB(db)
 	userService := user.NewUserService(userRepository)
