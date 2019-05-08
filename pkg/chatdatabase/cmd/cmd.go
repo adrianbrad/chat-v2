@@ -12,7 +12,7 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/adrianbrad/chat-v2/configs"
-	"github.com/adrianbrad/chat-v2/db"
+	d "github.com/adrianbrad/chat-v2/db"
 	"github.com/adrianbrad/chat-v2/internal/chatservice"
 	"github.com/adrianbrad/chat-v2/internal/client"
 	"github.com/adrianbrad/chat-v2/internal/message"
@@ -44,12 +44,16 @@ func NewChatDatabaseCommand() (cmd *cobra.Command) {
 
 func run(cmd *cobra.Command, args []string) {
 	dbConfig, appConfig := loadConfigs(cmd)
-	db, err := db.ConnectDB(dbConfig)
+	db, err := d.ConnectDB(dbConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	log.Infof("Successfully connected to db")
+
+	err = d.RunMigrations(filepath.Join(appConfig.Basedir, "db", "migrations"), db)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	userRepository := userrepository.NewUserRepositoryDB(db)
 	userService := user.NewUserService(userRepository)

@@ -1,0 +1,5 @@
+DROP TABLE messages CASCADE;
+DROP TABLE users CASCADE;
+DROP TABLE rooms CASCADE;
+DROP TABLE permissions CASCADE;
+DROP TABLE users_permissions CASCADE;
