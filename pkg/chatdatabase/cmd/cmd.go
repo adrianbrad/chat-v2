@@ -116,6 +116,7 @@ func run(cmd *cobra.Command, args []string) {
 		}
 		tm := time.Unix(i, 0)
 
+		fmt.Println(time.Now().UTC())
 		if time.Since(tm).Seconds() > 5 {
 			err = fmt.Errorf("Request is too old")
 			return

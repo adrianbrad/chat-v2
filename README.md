@@ -83,4 +83,4 @@ make run
 
 ### Backend Authentication
 
-- When making calls to backend endpoints that require [Backend Authentication](#backend-authentication), you have to add an `Authorization` header containg a HMAC-SHA256 hash, created from the current time in epoch and the secret key. The current time in epoch should be added to the `Date` header.
+- When making calls to backend endpoints that require [Backend Authentication](#backend-authentication), you have to add an `Authorization` header containg a HMAC-SHA256 hash, created from the current time in UNIX Epoch format and UTC timezone and the secret key. The date in UNIX Epoch format and UTC timezone should be added to the `Date` header.
