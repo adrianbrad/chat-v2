@@ -17,6 +17,18 @@ func BindConnect() {
 			return "Invalid nr of args"
 		}
 
+		if args[0].Type() != js.TypeString {
+			return "key is not string"
+		}
+
+		if args[1].Type() != js.TypeString {
+			return "room id is not string"
+		}
+
+		if args[2].Type() != js.TypeFunction {
+			return "callback func is not a func"
+		}
+
 		key := args[0]
 		roomID := args[1]
 		//callback is a function that receives one parameter which is either an error or the chat object
